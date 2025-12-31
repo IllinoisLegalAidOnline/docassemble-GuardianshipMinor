@@ -31,7 +31,10 @@ code: |
 # Road map
 sections:
   - section_intro: Start
-  - section_about_you: About you
+  - section_minor: Minor
+  - section_family: Minor's parents, caregivers, and relatives
+  - section_guardian: Guardian
+  - section_filing: Filing, notice, and delivery
   - section_download: Download  
 ---
 # interview order block
@@ -45,12 +48,21 @@ code: |
   whats_next
   accept_terms
 
+  set_progress(25)  
+  nav.set_section('section_minor')  
 
-  nav.set_section('section_about_you')  
-  filing_county
+  set_progress(50)
+  nav.set_section('section_family')    
+  
+  set_progress(75)
+  nav.set_section('section_guardian')  
   users[0].name.first
-
   e_signature
+
+  set_progress(90)
+  nav.set_section('section_filing')  
+  filing_county
+  
 
   set_progress(100)
   nav.set_section('section_download')
