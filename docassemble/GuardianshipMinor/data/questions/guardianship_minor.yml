@@ -1,0 +1,321 @@
+metadata:
+  title: Guardianship of a minor
+  short title: Guardianship of a minor
+  comment: This program helps you ask the court to become a legal guardian of a minor.
+  authors:
+    - Matt Newsted
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ILAO:ilao-interview-framework.yml
+  - docassemble.ILAO:shared-basic-questions.yml
+---
+objects:
+  - users: ALPeopleList.using(there_are_any=True)
+  - other_parties: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
+  - other_parties[i].jail_delivery_address: ALAddress
+  - children: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, complete_attribute='complete')
+  - delivery_parties: ALPeopleList.using(there_are_any=True)
+  - delivery_parties[i].lawyer: ALIndividual
+  - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
+---
+code: |
+  al_form_type = 'existing_case'
+  ilao_easy_form_title = "Guardianship of a minor"
+  ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/guardianship-minor"
+  form_name = "Petition for Guardianship of a Minor"
+  github_user = 'IllinoisLegalAidOnline'
+  github_repo_name = 'docassemble-GuardianshipMinor'
+  allowed_courts = ['Circuit']
+---
+# Road map
+sections:
+  - section_intro: Start
+  - section_about_you: About you
+  - section_download: Download  
+---
+# interview order block
+mandatory: True
+code: |
+  nav.set_section('section_intro')
+  sees_nav_bar
+  snapshot_start
+  how_to_use
+  set_progress(5)
+  whats_next
+  accept_terms
+
+
+  nav.set_section('section_about_you')  
+  filing_county
+  users[0].name.first
+
+  e_signature
+
+  set_progress(100)
+  nav.set_section('section_download')
+  forms_assembling
+  
+  snapshot_forms
+  get_docs_screen
+---
+code: |
+  stuff_to_snapshot = {
+  	'start_time': str(current_datetime().format_datetime()),
+  	'started_interview': True, 
+  	}
+
+  try:
+    stuff_to_snapshot['ip_address'] = device(ip=True)
+  except:
+    pass
+
+  stuff_to_snapshot['zip'] = showifdef('users[0].address.zip')
+
+  stuff_to_snapshot['downloaded_forms'] = showifdef('forms_assembling')
+  
+  try:
+    stuff_to_snapshot['session_id'] = current_context().session
+  except:
+    pass
+  
+  store_variables_snapshot(
+  	data=stuff_to_snapshot, persistent=True
+  	)
+  snapshot_interview_state = True
+---
+code: |
+  snapshot_interview_state
+  snapshot_start = True  
+---
+code: |
+  reconsider('snapshot_interview_state')
+  snapshot_forms = True
+---
+id: welcome
+question: |
+  Guardianship of a minor
+subquestion: |
+  Welcome to Illinois Legal Aid Online's **Guardianship of a minor** Easy Form.
+
+  This program helps you make a *${ form_name }* to **UPDATE**.
+  
+  To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
+field: sees_nav_bar
+---
+id: instructions
+continue button field: how_to_use
+question: |
+  Instructions
+subquestion: |
+  **UPDATE**
+  
+  To use this program you will need: 
+
+  * A child support order from an Illinois court, 
+  * A change of circumstances for you, the other parent, or the children,
+  * Information about the other parent, and  
+  * Information about the other parent's lawyer, if any. 
+
+  You can find most of this information on other court papers you have about this case. 
+
+  Set aside 10 to 20 minutes to finish this program. You can log in and save your work to continue later. 
+ 
+  ${ collapse_template(help_example) }  
+
+  Click on **{green words}** to learn what they mean. Some questions have a question mark in a circle ${ fa_icon("question-circle", color_css="#0dcaf0" ) } that also gives help.
+---
+template: help_example
+subject: |
+  **You can expand sections like this to show more information.**
+content: |  
+  This is an example of help. Click again to hide.
+---
+id: whats next
+continue button field: whats_next
+question: |
+  After you finish this program
+subquestion: |
+  **UPDATE**
+  
+  After you download your forms, you must file them with the court. This program **does not file** your forms for you.
+  
+  You may need to schedule a court date for when the judge will hear your motion. The scheduling process is different depending on your location and case type. Check with your local circuit clerk for how to schedule a motion hearing.
+  
+  Finally, you will need to send your *Motion* and *Notice of Court Date for Motion* forms to the other parent.
+  
+  To learn more, read the instructions you can download at the end of this program. 
+---
+
+---
+id: child support order type
+question: |
+  What kind of child support order do you want to change?
+subquestion: |
+  Judicial child support orders come through the courts and are signed by a judge. The parents might have started the case on their own, or the State's Attorney or Attorney General's office might be involved. Examples include: Judgment for Dissolution of Marriage, Order for Support, or Order of Parentage.
+
+  Administrative child support orders are set up through Child Support Services, part of the Illinois Department of Healthcare and Family Services (IDHFS). These are sometimes called Title IV-D cases.
+fields:
+  - Child support order type: order_type
+    input type: radio
+    choices:
+      - Administrative IV-D (through IDHFS): admin
+      - Judicial (through court): judicial
+      - Registered IV-D support order: registered
+        help: |
+          Select **Registered IV-D support order** if the original order was an administrative IV-D support order obtained through IDHFS and then registered with a clerk of the circuit court. Registering the order would give it a court case number that will be used when you file your motion.
+      - I'm not sure.: idk
+---
+id: must be judicial order
+event: must_be_judicial_order
+question: |
+  Sorry
+subquestion: |
+  This program makes forms to change a **judicial** child support order. The support order must have been issued or registered by an Illinois court.
+
+  To learn more about modifying an adminstrative support order, see [**What You Need to Know About the Modification Review Process for Child Support Orders](https://hfs.illinois.gov/childsupport/formsbrochures/hfs3588.html) on the IDHFS website.
+  
+  You can contact IDHFS to change or enforce (make the supporting parent pay) an administrative child support order. Call Child Support Services at 1-800-447-4278 or visit a [regional office](https://hfs.illinois.gov/childsupport/parents/offices.html).
+  
+  If you want to change the child support order yourself in court, you will have to register the administrative order. Contact your local circuit clerk to find out how to do it in the county where you live.
+  
+  Click **Back** if you made a mistake. Or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: user name
+sets:
+    - users[0].name.first
+question:  |
+  What is your name?
+fields:
+  - code: |
+      users[0].name_fields()
+---
+template: long_name_help
+subject: |
+  **What if I need more space?**
+content: |
+  If the person has a long name like "Jane Smith, Director of Housing," select **Business or organization**. You can then enter the full name and title.
+---
+id: filing county
+question: |
+  In which county will you file your *${ form_name }*?
+subquestion: |
+  You should file in the county where **MINOR** lives.
+fields:
+  - County: filing_county
+    code:
+      court_list._load_courts()["address_county"].unique()
+
+---
+id: e-signature
+question: |
+  Do you want to add your e-signature to your forms?
+subquestion: |
+  **UPDATE THIS PAGE**
+  
+  This program can put “**/s/ ${users[0].name_full()}**” where you would sign your name. The court will accept this as your signature.
+
+  If you do not add your **{e-signature}** now, you must sign your paper forms before you file and deliver them.
+
+  <div class="alert alert-info ilao-info" role="alert">
+    <h6 class="alert-heading">What it means to sign your forms</h6>
+    <p>By signing the <i>Motion</i> and <i>Notice of Court Date for Motion</i> forms, you are certifying that:</p>
+    <p><ul>
+      <li>You read the document,</li>
+      <li>You have been informed and believe it is true and correct, and</li>
+      <li>You are not filing it to cause delay or for another bad reason.</li>
+    </ul></p>
+    <p>See the <a href="https://ilcourtsaudio.blob.core.windows.net/antilles-resources/resources/9ce1fce9-895f-463e-b87d-f9b7631f8fde/Rule%20137.pdf"><b>Illinois Supreme Court Rule 137</b></a> for more information.</p>
+    <p>By signing the and Proof of Delivery section of your forms, you are certifying that:</p>
+    <p><ul>
+      <li>Everything on the forms is true and correct, or you have been informed or believe it to be true and correct, and</li>
+      <li>You understand that making a false statement on the forms is perjury and has penalties provided by law.</li>    </ul></p>
+  <p>See the <a href="https://www.ilga.gov/legislation/ilcs/documents/073500050k1-109.htm"><b>Illinois Code of Civil Procedure, 735 ILCS 5/1-109</b></a> for more information.</p>
+  </div>
+fields:
+  - "Add e-signature?": e_signature
+    datatype: yesnoradio
+terms:
+  - "e-signature": |
+      An e-signature is an electronic signature. It is a digital version of a signature that has the same effect as a hand-written signature. 
+
+
+
+---
+id: forms assembling
+continue button field: forms_assembling
+question: |
+  Almost done
+subquestion: |
+  After you click **Next**, it may take a few moments to finish making your forms.
+  
+  ###### You do not need to refresh your screen. Hang in there!
+  
+  [NEWLINE]
+---
+id: get docs screen
+event: get_docs_screen
+question: |
+  Download
+subquestion: |
+  
+  Your forms are ready. View and download your forms below. Click **:edit: Make changes** to fix any mistakes.
+  
+  This program **does not file** your Motion with the court or deliver it to other parties in your case. You will need to do this yourself. Learn about [**e-filing in Illinois**](https://www.illinoiscourts.gov/eservices/information-for-filers-without-lawyers).
+
+  ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
+  
+  ${ al_user_bundle.download_list_html() }
+
+  [NEWLINE]
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+  **Note:** This program **does not file** your Motion with the court or deliver it to other parties in your case. Learn about [**e-filing in Illinois**](https://www.illinoiscourts.gov/eservices/information-for-filers-without-lawyers).
+  
+  Thank you for using ILAO Easy Forms!
+under: |
+  % if not user_logged_in():
+  [${fa_icon("sign-in-alt", color="#0079d0", size="sm")} **Sign-in**](${url_of('login', next=interview_url())}) or [**create**](${url_of('register', next=interview_url())}) an ILAO Easy Form account to save your progress (optional).
+  % endif 
+
+  &nbsp;
+  ${ action_button_html(interview_url(i="docassemble.ILAO:feedback.yml", easy_form_interview=ilao_easy_form_url, easy_form_title=ilao_easy_form_title, easy_form_page=current_context().question_id, easy_form_variable=current_context().variable, local=False,reset=1), label=':comment: Was this program helpful?', color="#181c36", size="md", new_window=True) }
+---
+generic object: ALDocumentBundle
+template: x.send_email_template
+subject: |
+  Guardianship of a minor forms
+content: |
+  Your forms are attached.
+  
+  Thanks for using ILAO Easy Forms!
+  
+  [Illinois Legal Aid Online](https://www.illinoislegalaid.org)
+
+---
+objects:
+  - instructions: ALDocument.using(title="Instructions", filename="instructions.pdf", has_addendum=False)
+---
+code: |
+  instructions.enabled = True
+
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions], filename="minor_guardianship.pdf", title="All forms")
+  - al_court_bundle: ALDocumentBundle.using(elements=[]], filename="minor_guardianship.pdf", title="Motion")
+
+---
+attachment:
+  variable name: instructions[i]
+  name: instructions
+  filename: instructions
+  skip undefined: True
+  editable: False
+  pdf template file: instructions.pdf
+  fields:
+      - "fake": ${ "" }
+  
