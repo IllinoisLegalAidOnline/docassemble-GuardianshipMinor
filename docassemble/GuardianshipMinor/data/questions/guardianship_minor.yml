@@ -14,7 +14,7 @@ objects:
   - users: ALPeopleList.using(there_are_any=True)
   - other_parties: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
   - other_parties[i].jail_delivery_address: ALAddress
-  - children: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, complete_attribute='complete')
+  - child: ALIndividual
   - delivery_parties: ALPeopleList.using(there_are_any=True)
   - delivery_parties[i].lawyer: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
@@ -31,8 +31,8 @@ code: |
 # Road map
 sections:
   - section_intro: Start
-  - section_minor: Minor
-  - section_family: Minor's parents, caregivers, and relatives
+  - section_child: Child
+  - section_family: Child's parents, caregivers, and relatives
   - section_guardian: Guardian
   - section_filing: Filing, notice, and delivery
   - section_download: Download  
@@ -45,11 +45,25 @@ code: |
   snapshot_start
   how_to_use
   set_progress(5)
+  basic_info
   whats_next
   accept_terms
+  if not user_qualified:
+    ineligible_guardian
 
   set_progress(25)  
-  nav.set_section('section_minor')  
+  nav.set_section('section_child')
+  child.name.first
+  if child.age_in_years() >= 18:
+    child_too_old
+  if child.address.state != 'IL':
+    child_outside_illinois
+  previous_standby
+  current_stg
+  named_in_will
+  immigration_separation
+  guardianship_type
+  child_estate
 
   set_progress(50)
   nav.set_section('section_family')    
@@ -143,6 +157,20 @@ subject: |
 content: |  
   This is an example of help. Click again to hide.
 ---
+id: basic guardianship info
+continue button field: basic_info
+question: |
+  About guardianship of a child
+subquestion: |
+  **UPDATE**
+
+  Explain what it means to get guardianship of a child.
+
+  Duties, types (person, estate, both), process
+
+  Link to STG? or other forms of guardianship or other ILAO content?
+
+---
 id: whats next
 continue button field: whats_next
 question: |
@@ -158,43 +186,208 @@ subquestion: |
   
   To learn more, read the instructions you can download at the end of this program. 
 ---
-
----
-id: child support order type
+id: user qualified to be guardian
 question: |
-  What kind of child support order do you want to change?
+  Do you meet the legal requirements to ask for guardianship of a child?
 subquestion: |
-  Judicial child support orders come through the courts and are signed by a judge. The parents might have started the case on their own, or the State's Attorney or Attorney General's office might be involved. Examples include: Judgment for Dissolution of Marriage, Order for Support, or Order of Parentage.
+  UPDATE
 
-  Administrative child support orders are set up through Child Support Services, part of the Illinois Department of Healthcare and Family Services (IDHFS). These are sometimes called Title IV-D cases.
+  To ask the court to be appointed guardian of a child, you must:
+
+  * Be at least 18 years old,
+  * Live in the United States,
+  * Be of sound mind,
+  * Not be under a court-ordered guardianship yourself, and
+  * Not have a felony conviction that involves harm or threat to a minor.
+
+  **Note:** If you have a felony conviction that does not involve harm or threat to a minor, you may still be appointed if the judge finds it to be in the minor's best interest.  
 fields:
-  - Child support order type: order_type
-    input type: radio
-    choices:
-      - Administrative IV-D (through IDHFS): admin
-      - Judicial (through court): judicial
-      - Registered IV-D support order: registered
-        help: |
-          Select **Registered IV-D support order** if the original order was an administrative IV-D support order obtained through IDHFS and then registered with a clerk of the circuit court. Registering the order would give it a court case number that will be used when you file your motion.
-      - I'm not sure.: idk
+  - "Do you meet these requirements?": user_qualified
+    datatype: yesnoradio
 ---
-id: must be judicial order
-event: must_be_judicial_order
+id: ineligible guardian kick out
+event: ineligible_guardian
 question: |
   Sorry
 subquestion: |
-  This program makes forms to change a **judicial** child support order. The support order must have been issued or registered by an Illinois court.
+  Based on your answers, you do not meet the basic requirements to be appointed guardian of a child.
 
-  To learn more about modifying an adminstrative support order, see [**What You Need to Know About the Modification Review Process for Child Support Orders](https://hfs.illinois.gov/childsupport/formsbrochures/hfs3588.html) on the IDHFS website.
+  UPDATE
   
-  You can contact IDHFS to change or enforce (make the supporting parent pay) an administrative child support order. Call Child Support Services at 1-800-447-4278 or visit a [regional office](https://hfs.illinois.gov/childsupport/parents/offices.html).
-  
-  If you want to change the child support order yourself in court, you will have to register the administrative order. Contact your local circuit clerk to find out how to do it in the county where you live.
-  
-  Click **Back** if you made a mistake. Or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+  Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
   - Exit: exit
   - Restart: restart
+---
+id: child birthdate
+question: |
+  When was ${child.name_full()} born?
+subquestion: |
+  **Note:** If the child is undocumented and under 21, speak to an immigration lawyer to see if the minor is eligible for Special Immigrant Juvenile Status before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+fields:
+  - Birthdate: child.birthdate
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+---
+id: child too old kick out
+event: child_too_old
+question: |
+  Sorry
+subquestion: |
+  Based on your answers, ${child.name_full()} is no longer a minor child. This program makes forms to request guardianship of a child under the age of 18.
+
+  Check out ILAO's article about [**getting guardianship of an adult**](https://www.illinoislegalaid.org/node/29961).
+  
+  Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: child address
+question: |
+  What is ${child.name_full()}'s current address?
+subquestion: |
+  **Note:** This address will appear on your court papers.
+fields:
+  - Street address: child.address.address
+    address autocomplete: True
+  - Address line 2: child.address.unit
+    required: False
+  - City: child.address.city
+  - State: child.address.state
+    code: |
+      states_list()
+    default: IL
+  - ZIP code: child.address.zip
+    required: False
+---
+id: child outside illinois kick out
+event: child_outside_illinois
+question: |
+  Sorry
+subquestion: |
+  Based on your answers, ${child.name_full()} does not live in Illinois. This is a requirement for asking for guardianship of a child in Illinois.
+
+  If you want to file for guardianship outside Illinois, you can use the [**Legal Services Corporation website**](https://www.lsc.gov/about-lsc/what-legal-aid/get-legal-help) to find a legal aid organization in another state.
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: previous standby guardianship
+question: |
+  Has a judge appointed a standby guardian for ${child.name_full()}?
+subquestion: |
+  A court can appoint a person as a standby guardian. That person will become the guardian once the parents or current guardian are no longer able to care for the minor.
+
+  **Note:** If a standby guardian was appointed, you will need to attach the court order when you file your *${ form_name }*.
+fields:
+  - "Standby guardian appointed?": previous_standby
+    datatype: yesnoradio
+  - note: |
+      Be sure to attach the standby guardianship court order to your *${ form_name }* when you file.
+    show if:
+      variable: previous_standby
+      is: True
+---
+id: current short-term guardianship
+question: |
+  Is there a short-term guardian for ${child.name_full()}?
+subquestion: |
+  Parents can have a written agreement for someone to temporarily be the guardian without any court involvement.
+
+  **Note:** If a short-term guardian was appointed, you will need to attach the written agreement when you file your *${ form_name }*.
+fields:
+  - "Short-term guardian for ${child.name_full()}?": current_stg
+    datatype: yesnoradio
+  - note: |
+      Be sure to attach the written short-term guardianship agreement to your *${ form_name }* when you file.
+    show if:
+      variable: current_stg
+      is: True
+---
+id: named guardian in will
+question: |
+  Did ${child.name_full()}'s parents name you as a guardian in their will or in another document?
+subquestion: |
+  **Note:** If you were named to be ${child.name_full()}'s guardian in their parent's will or in another document, you will need to attach the will or other document when you file your *${ form_name }*.
+fields:
+  - "Were you named as ${child.name_full()}'s guardian in their parent's will or in another document?": named_in_will
+    datatype: yesnoradio
+  - note: |
+      Be sure to attach the will or other document naming you as guardian to your *${ form_name }* when you file.
+    show if:
+      variable: named_in_will
+      is: True
+---
+id: immigration separation
+question: |
+  Have Immigration officers separated ${child.name_full()} from their parents?
+subquestion: |
+  If ${child.name_full()} has been or will be separated from their parents due to federal immigration enforcement, this is called administrative separation.
+
+  **Note:** If ${child.name_full()} has been administratively separated from their parents, you will need to attach any documents related to that case when you file your *${ form_name }*.
+fields:
+  - "Was ${child.name_full()} separated from their parents by Immigration officers?": immigration_separation
+    datatype: yesnoradio
+  - note: |
+      Be sure to attach any documents related to the immigration case to your *${ form_name }* when you file.
+    show if:
+      variable: immigration_separation
+      is: True
+---
+id: guardianship type
+question: |
+  What kind of guardianship of ${child.name_full()} are you asking for?
+subquestion: |
+  UPDATE with explanation of types
+fields:
+  - Guardianship type: guardianship_type
+    input type: radio
+    choices:
+      - Person only: person
+      - Estate (property) only: estate
+      - Both person and estate (property): both
+---
+id: child estate
+question: |
+  ${child.name_full()}'s estate
+subquestion: |
+  In a guardianship case, an "estate" is any income, money, or belongings that ${child.name_full()} has. You need to enter this information even if you are not asking the judge to give you control of ${child.name_full()}'s estate.
+  
+  **Note:** You usually do not need to ask the judge to give you control over Social Security or public benefits, because control is designated by the agency rather than the judge.
+fields:
+  - "What is the current value of ${child.name_full()}'s estate?": child_estate
+    input type: radio
+    choices:
+      - "I don't know the value of ${child.name_full()}'s estate.": unknown
+      - "$0 - ${child.name_full()} has no property, assets or saved money.": zero
+      - "I will enter the amount.": amount                                                            
+  - "Value of ${child.name_full()}'s estate": estate_value
+    datatype: currency
+    show if:
+      variable: child_estate
+      is: 'amount'
+  - "What is the ${child.name_full()}'s annual income, including Social Security, SSI, and other public benefits?": child_income
+    input type: radio
+    choices:
+      - "I don't know the amount of ${child.name_full()}'s income.": unknown
+      - "$0 - ${child.name_full()} has no annual income.": zero
+      - "I will enter the amount.": amount                                                            
+  - "Value of ${child.name_full()}'s estate": income_value
+    datatype: currency
+    show if:
+      variable: child_income
+      is: 'amount'
+
+
+
+
+
+
+
+
+
+
 ---
 id: user name
 sets:
@@ -215,7 +408,7 @@ id: filing county
 question: |
   In which county will you file your *${ form_name }*?
 subquestion: |
-  You should file in the county where **MINOR** lives.
+  You should file in the county where **CHILD** lives.
 fields:
   - County: filing_county
     code:
