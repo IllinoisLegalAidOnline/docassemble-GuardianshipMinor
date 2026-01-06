@@ -12,9 +12,10 @@ include:
 ---
 objects:
   - users: ALPeopleList.using(there_are_any=True)
+  - child: ALIndividual
+  - parents: ALPeopleList
   - other_parties: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
   - other_parties[i].jail_delivery_address: ALAddress
-  - child: ALIndividual
   - delivery_parties: ALPeopleList.using(there_are_any=True)
   - delivery_parties[i].lawyer: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
@@ -66,7 +67,9 @@ code: |
   child_estate
 
   set_progress(50)
-  nav.set_section('section_family')    
+  nav.set_section('section_family')
+  if has_legal_parent:
+    parents[0].name.first
   
   set_progress(75)
   nav.set_section('section_guardian')  
@@ -378,9 +381,42 @@ fields:
     show if:
       variable: child_income
       is: 'amount'
+---
+id: any legal parents
+question: |
+  Does ${child.name_full()} have at least one legal parent?
+subquestion: |
+  Legal parents are entitled to notice if someone is asking a court to become a guardian of their child.
+  
+  You must list each of ${child.name_full()}'s parents on the *${ form_name }*, even if the parent:
+  
+  * Has died,
+  * Gave up physical custody of ${child.name_full()},
+  * Cannot be located, or
+  * Is unable or unwilling to take care of ${child.name_full()}.
 
-
-
+  **Note:**  Do not include parents who have had their parental rights terminated by a court.
+fields:
+  - Does ${child.name_full()} have at least one legal parent?": has_legal_parent
+    datatype: yesnoradio
+---
+id: names of parents
+sets:
+  - parents[i].name.first
+  - parents[i].name.last
+  - parents[i].name.middle
+  - parents[i].name.suffix
+question: |
+  % if i == 0:
+  Name of ${child.name_full()}'s parent
+  % else:
+  Name of ${child.name_full()}'s second parent
+  % endif
+subquestion: |
+  You may be able to find this on ${child.name_full()}'s birth certificate or other official records, if you have them.
+fields:
+  - code: |
+      parents[i].name_fields()
 
 
 
