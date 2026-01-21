@@ -16,6 +16,7 @@ objects:
   - parents: ALPeopleList
   - other_parties: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
   - other_parties[i].jail_delivery_address: ALAddress
+  - other_cases: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)  
   - delivery_parties: ALPeopleList.using(there_are_any=True)
   - delivery_parties[i].lawyer: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
@@ -70,6 +71,13 @@ code: |
   nav.set_section('section_family')
   if has_legal_parent:
     parents[0].name.first
+    parents[0].agrees
+    if has_another_parent:
+      parents[1].name.first
+      parents[1].agrees
+  if other_case_involving_parents:
+    other_cases.gather()
+  
   
   set_progress(75)
   nav.set_section('section_guardian')  
@@ -156,7 +164,7 @@ subquestion: |
 ---
 template: help_example
 subject: |
-  **You can expand sections like this to show more information.**
+  **You can click sections like this to show more information.**
 content: |  
   This is an example of help. Click again to hide.
 ---
@@ -417,7 +425,169 @@ subquestion: |
 fields:
   - code: |
       parents[i].name_fields()
+---
+id: info about parents
+question: |
+  Information about ${parents[i].name_full()}
+subquestion: |
+  Enter information about ${parents[i].name_full()}. Check all that apply.
+fields:
+  - "${parents[i].name_full()} agrees to the guardianship. They will have to sign a *Consent to Guardianship of Minor and Appearance* or give consent in court.": parents[i].agrees
+    datatype: yesno
+  - "${parents[i].name_full()} has died.": parents[i].is_dead
+    datatype: yesno
+  - "When did ${parents[i].name_full()} die?": parents[i].decease_date
+    datatype: date
+    show if:
+      variable: parents[i].is_dead
+      is: True
+  - "${parents[i].name_full()} voluntarily gave up custody of ${child.name_full()}.": parents[i].gave_up_custody
+    datatype: yesno
+  - "${parents[i].name_full()} cannot be found.": parents[i].not_found
+    datatype: yesno
+  - "**When** was ${parents[i].name_full()}'s last contact with ${child.name_full()}?": parents[i].last_contact_date
+    datatype: date
+    show if:
+      variable: parents[i].not_found
+      is: True
+  - "**Where** was ${parents[i].name_full()}'s last contact with ${child.name_full()}?": parents[i].last_contact_location
+    maxlength: 50
+    show if:
+      variable: parents[i].not_found
+      is: True
+  - "${parents[i].name_full()} is unable or unwilling to take care of  ${child.name_full()}.": parents[i].unable
+    datatype: yesno
+---
+id: any legal parents
+question: |
+  Does ${child.name_full()} have another legal parent?
+subquestion: |
+  There is probably no other legal parent if:
 
+  * No other parent is listed on the birth certificate,
+  * There is no Voluntary Acknowledgment of Paternity/Parentage,
+  * The parents were not married at the time the child was born, and
+  * Parentage has not been decided by a court or administrative agency.
+
+  You already entered information about ${parents[0].name_full()}.
+
+  ${ collapse_template(parental_notice_help) }
+  
+  **Note:** You do not need to include parents who have had their parental rights terminated by a court.
+fields:
+  - Does ${child.name_full()} have another legal parent?": has_another_parent
+    datatype: yesnoradio
+---
+template: parental_notice_help
+subject: |
+  **Remind me why parents must be included**
+content: |  
+  Legal parents are entitled to notice if someone is asking a court to become a guardian of their child.
+  
+  You must list each of ${child.name_full()}'s parents on the *${ form_name }*, even if the parent:
+  
+  * Has died,
+  * Gave up physical custody of ${child.name_full()},
+  * Cannot be located, or
+  * Is unable or unwilling to take care of ${child.name_full()}.
+---
+id: another court case that involves parents
+question: |
+  Do you know of any court cases that involve ${child.name_full()} or their parents?
+subquestion: |
+  This includes adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US on your forms.
+fields:
+  - no label: other_case_involving_parents
+    datatype: yesnoradio
+---
+code: |
+  other_cases[i].name.text
+  other_cases[i].in_us
+  other_cases[i].complete = True
+---
+id: info about first other case
+question: |
+  Information about another case
+subquestion: |
+  This includes adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US.
+
+  This information should be found on the court papers from the other case. If you do not have the court papers, you may be able to find the case information online. To learn more, read ILAO's article about [how to access court records](https://www.illinoislegalaid.org/node/33186).
+fields:
+  - Case number: other_cases[0].name.text
+    maxlength: 25
+  - Was the case filed in the United States?: other_cases[0].in_us
+    datatype: yesnoradio
+  - State: other_cases[0].state
+    show if: 
+      variable: other_cases[0].in_us
+      is: True
+    code: |
+      states_list()
+  - County: other_cases[0].county
+    code: |
+      court_list._load_courts()["address_county"].unique()      
+    js show if: |
+      val('other_cases[0].in_us') && val('other_cases[0].state') === "IL"
+  - Country (outside US): other_cases[0].non_us_country
+    show if: 
+      variable: other_cases[0].in_us
+      is: False
+---
+id: info about other cases
+question: |
+  Information about a ${ ordinal(i) } other case
+subquestion: |
+  This includes adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US on your forms.
+
+  This information should be found on the court papers from the other case. If you do not have the court papers, you may be able to find the case information online. To learn more, read ILAO's article about [how to access court records](https://www.illinoislegalaid.org/node/33186).
+fields:
+  - Case number: other_cases[i].name.text
+    maxlength: 25
+  - Was the case filed in the United States?: other_cases[i].in_us
+    datatype: yesnoradio
+  - State: other_cases[i].state
+    show if: 
+      variable: other_cases[i].in_us
+      is: True
+    code: |
+      states_list()
+  - County: other_cases[i].county
+    code: |
+      court_list._load_courts()["address_county"].unique()      
+    js show if: |
+      val('other_cases[i].in_us') && val('other_cases[i].state') === "IL"
+  - Country (outside US): other_cases[i].non_us_country
+    code: |
+      countries_list()
+    show if: 
+      variable: other_cases[i].in_us
+      is: False
+---
+id: any other cases
+question: |  
+  Do you know of any other court cases that involve ${child.name_full()} or their parents?
+subquestion: |
+  So far you have told us about:
+
+  % for case in other_cases:
+  % if case.in_us:
+  * Case number: ${case.name.text} in ${state_name(case.state)}
+  % else:  
+  * Case number: ${case.name.text} in ${country_name(case.non_us_country)}
+  % endif  
+  % endfor  
+
+  The forms have room for up to eight cases.
+
+  You only need to include adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US on your forms.  
+fields:
+  - "Any other cases?": other_cases.there_is_another
+    datatype: yesnoradio
+---
+code: |
+  if other_cases.number_gathered() >= 8:
+    other_cases.there_is_another = False
+---
 
 
 
