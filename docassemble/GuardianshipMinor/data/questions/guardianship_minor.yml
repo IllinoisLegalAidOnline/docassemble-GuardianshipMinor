@@ -14,11 +14,15 @@ objects:
   - users: ALPeopleList.using(there_are_any=True)
   - child: ALIndividual
   - parents: ALPeopleList
-  - other_parties: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
-  - other_parties[i].jail_delivery_address: ALAddress
+  - parents.jail_delivery_address: ALAddress
   - other_cases: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)  
+  - caregivers: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
+  - caregivers[i].jail_delivery_address: ALAddress
+  - spouse: ALIndividual
+  - spouse.jail_delivery_address: ALAddress
+  - adult_relatives: ALPeopleList.using(complete_attribute='complete')
+  - adult_relatives[i].jail_delivery_address: ALAddress
   - delivery_parties: ALPeopleList.using(there_are_any=True)
-  - delivery_parties[i].lawyer: ALIndividual
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
 code: |
@@ -77,6 +81,13 @@ code: |
       parents[1].agrees
   if other_case_involving_parents:
     other_cases.gather()
+  caregivers.gather()
+  if minor_is_married:
+    spouse.name.first
+    spouse.address.unknown
+  else:
+    if adult_relatives.there_are_any:
+      adult_relatives.gather()
   
   
   set_progress(75)
@@ -588,9 +599,186 @@ code: |
   if other_cases.number_gathered() >= 8:
     other_cases.there_is_another = False
 ---
+code: |
+  caregivers[i].name.first
+  caregivers[i].relationship
+  caregivers[i].complete = True
+---
+id: caregiver name
+sets: 
+  - caregivers[i].name.first
+question: |
+  % if i==0:
+  Who is an adult that lives with ${child.name_full()}?
+  % else:
+  Who is another adult that lives with ${child.name_full()}?  
+  % endif
+subquestion: |
+  % if i>0:
+  So far you have told us about:
+  
+  % for x in range(caregivers.number_gathered() - 1):
+  * ${caregivers[x].name_full()}, ${caregivers[x].relationship}
+  % endfor  
 
+  % endif
+  You can include up to four adults that live with ${child.name_full()} at ${child.address.on_one_line(bare=True)}.
+fields:
+  - code: |
+      caregivers[i].name_fields()
+---
+id: caregiver relationship
+question: |
+  What is ${caregivers[i].name_full()}'s relationship to ${child.name_full()}?
+subquestion: |
+  You can enter things like parent, brother, sister, aunt, uncle, grandparent, cousin, short-term guardian, etc.
+fields:
+  - "Relationship to ${child.name_full()}": caregivers[i].relationship
+    maxlength: 25
+---
+id: any other caregivers
+question: |  
+  Are there any other adults that live with ${child.name_full()}?
+subquestion: |
+  So far you have told us about:
 
+  % for caregiver in caregivers:
+  * ${caregiver.name_full()}, ${caregiver.relationship}
+  % endfor  
 
+  The forms have room for up to four adults that live with ${child.name_full()} at ${child.address.on_one_line(bare=True)}.
+fields:
+  - "Any other adults?": caregivers.there_is_another
+    datatype: yesnoradio
+---
+code: |
+  if caregivers.number_gathered() >= 4:
+    caregivers.there_is_another = False
+---
+id: is minor married
+question: |  
+  Is ${child.name_full()} married?
+subquestion: |
+  If ${child.name_full()} married, their spouse needs to have a chance to participate in the guardianship request case.
+fields:
+  - "Is ${child.name_full()} married?": minor_is_married
+    datatype: yesnoradio
+---
+id: spouse name
+sets: 
+  - spouse.name.first
+question: |
+  Who is ${child.name_full()}'s spouse? 
+fields:
+  - code: |
+      spouse.name_fields()
+---
+id: spouse address
+question: |
+  What is ${spouse.name_full()}'s current address?
+fields:
+  - Street address: spouse.address.address
+    address autocomplete: True
+  - Address line 2: spouse.address.unit
+    required: False
+  - City: spouse.address.city
+  - State: spouse.address.state
+    code: |
+      states_list()
+    default: IL
+  - ZIP code: spouse.address.zip
+    required: False
+  - "I don't know ${spouse.name_full()}'s address.": spouse.address.unknown
+    datatype: yesno
+    disable others: True
+---
+id: any adult_relatives
+question: |  
+  Does ${child.name_full()} have any other adult relatives?
+subquestion: |
+  UPDATE: Who should be listed?
+  
+  So far you have told us about: UPDATE TO INCLUDE parents AND caregivers
+
+  NEW LIST
+  
+  The forms have room for up to ten adult relatives of ${child.name_full()}.
+fields:
+  - "Any other adult relatives?": adult_relatives.there_are_any
+    datatype: yesnoradio
+
+---
+code: |
+  adult_relatives[i].name.first
+  adult_relatives[i].relationship
+  adult_relatives[i].address.unknown
+  adult_relatives[i].complete = True
+---
+sets: 
+  - adult_relatives[i].name.first
+id: adult relative name
+question: |
+  Who is another adult relative of ${child.name_full()}?
+subquestion: |
+  So far you told us about: UPDATE TO INCLUDE parents, caregivers, already gathered adult relatives
+
+  % for x in range(adult_relatives.number_gathered() - 1):
+  * ${adult_relatives[x].name_full()}, ${adult_relatives[x].relationship}
+  % endfor  
+
+  You can include up to ten adult relatives of ${child.name_full()}.
+fields:
+  - code: |
+      adult_relatives[i].name_fields()
+---
+id: adult relative relationship
+question: |
+  What is ${adult_relatives[i].name_full()}'s relationship to ${child.name_full()}?
+fields:
+  - Relationship to ${child.name_full()}: adult_relatives[i].relationship
+    maxlength: 25
+---
+id: adult relative address
+question: |
+  What is ${adult_relatives[i].name_full()}'s current address?
+fields:
+  - Street address: adult_relatives[i].address.address
+    address autocomplete: True
+  - Address line 2: adult_relatives[i].address.unit
+    required: False
+  - City: adult_relatives[i].address.city
+  - State: adult_relatives[i].address.state
+    code: |
+      states_list()
+    default: IL
+  - ZIP code: adult_relatives[i].address.zip
+    required: False
+  - "I don't know ${adult_relatives[i].name_full()}'s address.": adult_relatives[i].address.unknown
+    datatype: yesno
+    disable others: True
+---
+id: any other adult_relatives
+question: |  
+  Does ${child.name_full()} have any other adult relatives?
+subquestion: |
+  So far you have told us about: UPDATE TO INCLUDE parents, caregivers, already gathered adult relatives
+
+  % for caregiver in adult_relatives:
+  * ${caregiver.name_full()}, ${caregiver.relationship}
+  % endfor  
+
+  UPDATE: You should list ....
+  
+  The forms have room for up to ten adult relatives of ${child.name_full()}.
+fields:
+  - "Any other adult relatives?": adult_relatives.there_is_another
+    datatype: yesnoradio
+---
+# This will need to be adjusted to account for parents/caregivers
+code: |
+  if adult_relatives.number_gathered() >= 10:
+    adult_relatives.there_is_another = False
+---
 
 
 
