@@ -22,7 +22,7 @@ objects:
   - spouse.jail_delivery_address: ALAddress
   - adult_relatives: ALPeopleList.using(complete_attribute='complete')
   - adult_relatives[i].jail_delivery_address: ALAddress
-  - delivery_parties: ALPeopleList.using(there_are_any=True)
+  - notice_parties: ALPeopleList.using(there_are_any=True)
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
 code: |
@@ -88,7 +88,7 @@ code: |
   else:
     if adult_relatives.there_are_any:
       adult_relatives.gather()
-  
+  debug_page
   
   set_progress(75)
   nav.set_section('section_guardian')  
@@ -623,6 +623,8 @@ subquestion: |
 
   % endif
   You can include up to four adults that live with ${child.name_full()} at ${child.address.on_one_line(bare=True)}.
+
+  **Note:** Be sure to list ${child.name_full()}'s parents, if any of them live with their child.
 fields:
   - code: |
       caregivers[i].name_fields()
@@ -647,6 +649,8 @@ subquestion: |
   % endfor  
 
   The forms have room for up to four adults that live with ${child.name_full()} at ${child.address.on_one_line(bare=True)}.
+
+  **Note:** Be sure to list ${child.name_full()}'s parents, if any of them live with their child.  
 fields:
   - "Any other adults?": caregivers.there_is_another
     datatype: yesnoradio
@@ -694,13 +698,18 @@ fields:
 ---
 id: any adult_relatives
 question: |  
-  Does ${child.name_full()} have any other adult relatives?
-subquestion: |
-  UPDATE: Who should be listed?
-  
-  So far you have told us about: UPDATE TO INCLUDE parents AND caregivers
+  Does ${child.name_full()} have any adult relatives?
+subquestion: | 
+  So far you have told us about: 
 
-  NEW LIST
+  % for person in caregivers:
+  * ${person.name_full()}, ${person.relationship}
+  % endfor
+
+  **Important:**
+
+  * List ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.
+  * If ${child.name_full()} has none of the above relatives, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).
   
   The forms have room for up to ten adult relatives of ${child.name_full()}.
 fields:
@@ -720,12 +729,20 @@ id: adult relative name
 question: |
   Who is another adult relative of ${child.name_full()}?
 subquestion: |
-  So far you told us about: UPDATE TO INCLUDE parents, caregivers, already gathered adult relatives
+  So far you told us about: 
 
-  % for x in range(adult_relatives.number_gathered() - 1):
+  % for person in caregivers:
+  * ${person.name_full()}, ${person.relationship}
+  % endfor
+  % for x in range(adult_relatives.number() - 1):
   * ${adult_relatives[x].name_full()}, ${adult_relatives[x].relationship}
-  % endfor  
+  % endfor
 
+  **Important:**
+
+  * List ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.
+  * If ${child.name_full()} has none of the above relatives, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).
+  
   You can include up to ten adult relatives of ${child.name_full()}.
 fields:
   - code: |
@@ -761,27 +778,70 @@ id: any other adult_relatives
 question: |  
   Does ${child.name_full()} have any other adult relatives?
 subquestion: |
-  So far you have told us about: UPDATE TO INCLUDE parents, caregivers, already gathered adult relatives
+  So far you have told us about:
 
-  % for caregiver in adult_relatives:
-  * ${caregiver.name_full()}, ${caregiver.relationship}
-  % endfor  
+  % for person in caregivers:
+  * ${person.name_full()}, ${person.relationship}
+  % endfor
+  % for adult in adult_relatives:
+  * ${adult.name_full()}, ${adult.relationship}
+  % endfor
 
-  UPDATE: You should list ....
+  **Important:**
+
+  * List ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.
+  * If ${child.name_full()} has none of the above relatives, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).
   
   The forms have room for up to ten adult relatives of ${child.name_full()}.
 fields:
   - "Any other adult relatives?": adult_relatives.there_is_another
     datatype: yesnoradio
 ---
-# This will need to be adjusted to account for parents/caregivers
 code: |
-  if adult_relatives.number_gathered() >= 10:
+  if adult_relatives.number_gathered() >= ( 10-caregivers.number() ):
     adult_relatives.there_is_another = False
 ---
+code: |
+  def get_notice_parties():  
+    temp_list = []
+    
+    if minor_is_married:
+      temp_list.append(spouse)
+    else:
+      for caregiver in caregivers:
+        temp_list.append(caregiver)    	  
+      if adult_relatives.there_are_any:
+        for x in range(adult_relatives.number() - 1):
+          temp_list.append(adult_relatives[x])
+    
+    return temp_list
+---
+id: debug
+question: |
+  DEBUG PAGE
+subquestion: |
+
+  Notice parties (NOT INCLUDING LAST ADULT RELATIVE WHY):
+
+  % for party in get_notice_parties():
+  * ${party.name_full()}, ${party.relationship}
+  % endfor
+
+  Caregivers:
+
+  % for person in caregivers:
+  * ${person.name_full()}, ${person.relationship}
+  % endfor
+
+  Adult relatives:
+  
+  % for adult in adult_relatives:
+  * ${adult.name_full()}, ${adult.relationship}
+  % endfor
 
 
-
+  
+continue button field: debug_page
 ---
 id: user name
 sets:
