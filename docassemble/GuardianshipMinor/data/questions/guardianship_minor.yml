@@ -107,8 +107,24 @@ code: |
     users[0].felony_convictions.gather()
   users[0].phone_number 
   e_signature
+  if add_co_guardian == True:
+    users[1].name.first
+    if users[1].age_in_years() < 18:
+      co_guardian_too_young
+    else:
+      if users[1].is_willing == False:
+        co_guardian_not_willing
+      else:
+        users[1].address.address
+        users[1].job
+        users[1].is_disabled
+        users[1].found_negligent
+        if users[1].has_felony_conviction:
+          users[1].felony_convictions.gather()
 
 
+
+  
   
   set_progress(90)
   nav.set_section('section_filing')  
@@ -906,13 +922,7 @@ id: guardian willing and able
 question: |
   Are you willing and able to act as guardian of ${child.name_full()}?
 subquestion: |
-  Being willing and able means that:
-
-  * You are responsible for the health, welfare, and education of ${child.name_full()}.
-  * You must notify the court and ${child.name_full()}'s parents of any change in your address or the address of ${child.name_full()} within 30 days of the change.
-  * You must get permission from the judge before moving out of state with ${child.name_full()} or traveling with them outside the state for more than 30 days.
-  * You cannot transfer custody of ${child.name_full()} to anyone, including ${child.name_full()}'s parents, without permission from the judge, and
-  * You will file any reports the judge requires.
+  Being willing and able means that you will be responsible for the health, welfare, and education of ${child.name_full()}.
 fields:
   - no label: users[0].is_willing
     datatype: yesnoradio
@@ -922,7 +932,7 @@ event: guardian_not_willing
 question: |
   Sorry
 subquestion: |
-  You must be willing and able to the terms of minor guardianship to be appointed as a guardian.
+  You must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as a guardian.
   
   Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
@@ -973,15 +983,30 @@ subquestion: |
 fields:
   - no label: users[0].found_negligent
     datatype: yesnoradio
- 
 ---
-id: guardian has felony conviction
+
+
+
+
+---
+id: any felony convictions
+generic object: ALPeopleList
 question: |
+  % if i== 0:
   Do you have any felony convictions?
+  % else: 
+  Does ${x[i].name_full()} have any felony convictions?
+  % endif
 subquestion: |
-  You must list felony convictions on your forms. It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+  % if i== 0:
+  You must list your felony convictions on your forms. It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+  % else: 
+  You must list ${x[i].name_full()}'s felony convictions on your forms. It is up to the judge to decide how they might affect ${x[i].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+  % endif
+
+  ${collapse_template(felony_conviction_help)}  
 fields:
-  - no label: users[0].has_felony_conviction
+  - no label: x[i].has_felony_conviction
     datatype: yesnoradio
 ---
 code: |
@@ -989,51 +1014,87 @@ code: |
   users[0].felony_convictions[i].complete = True
 ---
 id: info about first felony conviction
+generic object: ALPeopleList
 question: |
+  % if i== 0:
   Information about your felony conviction
+  % else: 
+  Information about ${x[i].name_full()}'s felony conviction
+  % endif  
 subquestion: |
+  % if i== 0:
   It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+  % else: 
+  It is up to the judge to decide how they might affect ${x[i].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+  % endif
+
+  ${collapse_template(felony_conviction_help)}
 fields:
-  - Date of conviction: users[0].felony_convictions[0].date
+  - Date of conviction: x[i].felony_convictions[0].date
     datatype: ThreePartsDate
     alMax: ${ today().format("yyyy-MM-dd") }
-    alMin: users[0].birthdate
-  - Charge: users[0].felony_convictions[0].name.text
+    alMin: x[i].birthdate
+  - Charge: x[i].felony_convictions[0].name.text
     maxlength: 40
 ---
 id: info about other felony convictions
+generic object: ALPeopleList
 question: |
-  Information about a ${ ordinal(i) } felony conviction
+  % if i== 0:
+  Information about a ${ ordinal(j) } felony conviction
+  % else: 
+  Information about ${x[i].name_full()}'s ${ ordinal(j) } felony conviction
+  % endif 
 subquestion: |
+  % if i== 0:
   It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+  % else: 
+  It is up to the judge to decide how they might affect ${x[i].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+  % endif
+
+  ${collapse_template(felony_conviction_help)}
 fields:
-  - Date of conviction: users[0].felony_convictions[i].date
+  - Date of conviction: x[i].felony_convictions[j].date
     datatype: ThreePartsDate
-    alMin: ${ users[0].birthdate.format("yyyy-MM-dd") }
+    alMin: ${ x[i].birthdate.format("yyyy-MM-dd") }
     alMax: ${ today().format("yyyy-MM-dd") }
-  - Charge: users[0].felony_convictions[i].name.text
+  - Charge: x[i].felony_convictions[j].name.text
     maxlength: 40
 ---
-id: any other cases
-question: |  
+template: felony_conviction_help
+subject: |
+  **What will the judge consider?**
+content: |  
+  A person with a felony conviction that involves harm or threat to a minor cannot be appointed guardian of a minor.
+  
+  If that person has a felony conviction that does not involve harm or threat to a minor, they may still be appointed if the judge finds it to be in the minor's best interest.
+
+
+
+---
+id: any other felony convictions
+generic object: ALPeopleList
+question: |
+  % if i== 0:
   Do you have any other felony convictions?
+  % else: 
+  Does ${x[i].name_full()} have any other felony convictions?
+  % endif 
 subquestion: |
   So far you have told us about:
 
-  % for conviction in users[0].felony_convictions:
+  % for conviction in x[i].felony_convictions:
   * Date of conviction: ${conviction.date}, Charge: ${conviction.name.text}
   % endfor  
 
   The forms have room for up to three felony convictions.
 fields:
-  - "Any other felony convictions?": users[0].felony_convictions.there_is_another
+  - "Any other felony convictions?": x[i].felony_convictions.there_is_another
     datatype: yesnoradio
 ---
 code: |
   if users[0].felony_convictions.number_gathered() >= 3:
     users[0].felony_convictions.there_is_another = False
----
-
 ---
 id: your contact information
 question: |
@@ -1080,12 +1141,111 @@ content: |
   * [**Gmail**](https://accounts.google.com/SignUp)
   * [**Outlook**](https://outlook.live.com/owa/?nlp=1&signup=1)
   * [**Yahoo**](https://login.yahoo.com/account/create?.lang=en-US&.intl=us)
+---
+id: add co-guardian
+question: |
+  Do you want someone to be a co-guardian of ${child.name_full()} with you? 
+fields:
+  - no label: add_co_guardian
+    datatype: yesnoradio
+---
+id: co-guardian name
+sets:
+    - users[1].name.first
+question:  |
+  Who do you want to be co-guardian?
+fields:
+  - code: |
+      users[1].name_fields()
+---
+id: co-guardian birthdate
+question: |
+  When was ${users[1].name_full()} born?
+fields:
+  - Birthdate: users[1].birthdate
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+---
+id: co-guardian too young kick out
+continue button field: co_guardian_too_young
+question: |
+  Sorry
+subquestion: |
+  A person must be at least 18 years old to be appointed as a co-guardian.
+  
+  Click **Back** if you made a mistake, or click **Next** to continue making forms for you as the guardian.
+---
+id: co-guardian willing and able
+question: |
+  Is ${users[1].name_full()} willing and able to act as guardian of ${child.name_full()}?
+subquestion: |
+  Being willing and able means that ${users[1].name_full()} will be responsible for the health, welfare, and education of ${child.name_full()}.
+fields:
+  - no label: users[1].is_willing
+    datatype: yesnoradio
+---
+id: co-guardian not willing kick out
+continue button field: co_guardian_not_willing
+question: |
+  Sorry
+subquestion: |
+  ${users[1].name_full()} must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as a guardian.
 
-
-
-
-
-
+  Click **Back** if you made a mistake, or click **Next** to continue making forms for you as the guardian.
+---
+id: co-guardian address
+question: |
+  What is ${users[1].name_full()}'s current address?
+subquestion: |
+  **Note:** This address will appear on your court papers.
+fields:
+  - Street address: users[1].address.address
+    address autocomplete: True
+  - Address line 2: users[1].address.unit
+    required: False
+  - City: users[1].address.city
+  - State: users[1].address.state
+    code: |
+      states_list()
+    default: IL
+  - ZIP code: users[1].address.zip
+    required: False
+---
+id: co-guardian job
+question: |
+  What is ${users[1].name_full()}'s current job?
+subquestion: |
+  If ${users[1].name_full()} is unemployed, retired, or receiving public benefits, you can enter that information.
+fields:
+  - ${users[1].name_full()}'s job: users[1].job
+    maxlength: 50
+---
+id: co-guardian disabled
+question: |
+  Has a judge found ${users[1].name_full()} disabled and appointed a Guardian for them?
+subquestion: |
+  It is up to the judge to decide how this might affect ${users[1].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - no label: users[1].is_disabled
+    datatype: yesnoradio
+---
+id: co-guardian negligent
+question: |
+  Has ${users[1].name_full()} been found to have neglected or abused any minor by DCFS or in court?
+subquestion: |
+  It is up to the judge to decide how this might affect ${users[1].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - no label: users[1].found_negligent
+    datatype: yesnoradio
+---
+code: |
+  users[1].felony_convictions[i].name.text
+  users[1].felony_convictions[i].complete = True
+---
+code: |
+  if users[1].felony_convictions.number_gathered() >= 3:
+    users[1].felony_convictions.there_is_another = False
+---
 
 
 
