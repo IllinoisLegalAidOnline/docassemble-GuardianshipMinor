@@ -12,9 +12,10 @@ include:
 ---
 objects:
   - users: ALPeopleList.using(there_are_any=True)
+  - users[i].felony_convictions: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)
   - child: ALIndividual
   - parents: ALPeopleList
-  - parents.jail_delivery_address: ALAddress
+  - parents[i].jail_delivery_address: ALAddress
   - other_cases: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)  
   - caregivers: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
   - caregivers[i].jail_delivery_address: ALAddress
@@ -91,10 +92,24 @@ code: |
   debug_page
   
   set_progress(75)
-  nav.set_section('section_guardian')  
+  nav.set_section('section_guardian')
+  guardian_intro
   users[0].name.first
+  if users[0].age_in_years() < 18:
+    guardian_too_young
+  if users[0].is_willing == False:
+    guardian_not_willing
+  users[0].address.address
+  users[0].job
+  users[0].is_disabled
+  users[0].found_negligent
+  if users[0].has_felony_conviction:
+    users[0].felony_convictions.gather()
+  users[0].phone_number 
   e_signature
 
+
+  
   set_progress(90)
   nav.set_section('section_filing')  
   filing_county
@@ -191,6 +206,8 @@ subquestion: |
   Duties, types (person, estate, both), process
 
   Link to STG? or other forms of guardianship or other ILAO content?
+
+  ADD info about this program is designed to be used by the person who wants to become guardian.
 
 ---
 id: whats next
@@ -843,26 +860,243 @@ subquestion: |
   
 continue button field: debug_page
 ---
+id: guardian intro
+continue button field: guardian_intro
+question: |
+  Information about the guardian
+subquestion: |
+  **UPDATE**
+
+  The next screens will ask questions about you, the person who wants to be ${child.name_full()}'s guardian. If you want the court to appoint a co-guardian, you can enter their information as well.
+
+  **Note:** You may have entered some of this information already if you live with or are related to ${child.name_full()}. It is important that it is included in both places.
+---
 id: user name
 sets:
     - users[0].name.first
 question:  |
   What is your name?
+subquestion: |
+  You will be listed on the court forms as the proposed guardian.
 fields:
   - code: |
       users[0].name_fields()
 ---
-template: long_name_help
+id: user birthdate
+question: |
+  When were you born?
+fields:
+  - Birthdate: users[0].birthdate
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+---
+id: guardian too young kick out
+event: guardian_too_young
+question: |
+  Sorry
+subquestion: |
+  You must be at least 18 years old to be appointed as a guardian.
+  
+  Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: guardian willing and able
+question: |
+  Are you willing and able to act as guardian of ${child.name_full()}?
+subquestion: |
+  Being willing and able means that:
+
+  * You are responsible for the health, welfare, and education of ${child.name_full()}.
+  * You must notify the court and ${child.name_full()}'s parents of any change in your address or the address of ${child.name_full()} within 30 days of the change.
+  * You must get permission from the judge before moving out of state with ${child.name_full()} or traveling with them outside the state for more than 30 days.
+  * You cannot transfer custody of ${child.name_full()} to anyone, including ${child.name_full()}'s parents, without permission from the judge, and
+  * You will file any reports the judge requires.
+fields:
+  - no label: users[0].is_willing
+    datatype: yesnoradio
+---
+id: guardian not willing kick out
+event: guardian_not_willing
+question: |
+  Sorry
+subquestion: |
+  You must be willing and able to the terms of minor guardianship to be appointed as a guardian.
+  
+  Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: user address
+question: |
+  What is your current address?
+subquestion: |
+  **Note:** This address will appear on your court papers.
+fields:
+  - Street address: users[0].address.address
+    address autocomplete: True
+  - Address line 2: users[0].address.unit
+    required: False
+  - City: users[0].address.city
+  - State: users[0].address.state
+    code: |
+      states_list()
+    default: IL
+  - ZIP code: users[0].address.zip
+    required: False
+---
+id: guardian job
+question: |
+  What is your current job?
+subquestion: |
+  If you are unemployed, retired, or receiving public benefits, you can enter that information.
+fields:
+  - Job: users[0].job
+    maxlength: 50
+---
+id: guardian disabled
+question: |
+  Has a judge found you disabled and appointed you a Guardian?
+subquestion: |
+  It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - no label: users[0].is_disabled
+    datatype: yesnoradio
+---
+id: guardian negligent
+question: |
+  Have you been found to have neglected or abused any minor by DCFS or in court?
+subquestion: |
+  It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - no label: users[0].found_negligent
+    datatype: yesnoradio
+ 
+---
+id: guardian has felony conviction
+question: |
+  Do you have any felony convictions?
+subquestion: |
+  You must list felony convictions on your forms. It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - no label: users[0].has_felony_conviction
+    datatype: yesnoradio
+---
+code: |
+  users[0].felony_convictions[i].name.text
+  users[0].felony_convictions[i].complete = True
+---
+id: info about first felony conviction
+question: |
+  Information about your felony conviction
+subquestion: |
+  It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - Date of conviction: users[0].felony_convictions[0].date
+    datatype: ThreePartsDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+    alMin: users[0].birthdate
+  - Charge: users[0].felony_convictions[0].name.text
+    maxlength: 40
+---
+id: info about other felony convictions
+question: |
+  Information about a ${ ordinal(i) } felony conviction
+subquestion: |
+  It is up to the judge to decide how they might affect your ability to be appointed guardian of ${child.name_full()}.
+fields:
+  - Date of conviction: users[0].felony_convictions[i].date
+    datatype: ThreePartsDate
+    alMin: ${ users[0].birthdate.format("yyyy-MM-dd") }
+    alMax: ${ today().format("yyyy-MM-dd") }
+  - Charge: users[0].felony_convictions[i].name.text
+    maxlength: 40
+---
+id: any other cases
+question: |  
+  Do you have any other felony convictions?
+subquestion: |
+  So far you have told us about:
+
+  % for conviction in users[0].felony_convictions:
+  * Date of conviction: ${conviction.date}, Charge: ${conviction.name.text}
+  % endfor  
+
+  The forms have room for up to three felony convictions.
+fields:
+  - "Any other felony convictions?": users[0].felony_convictions.there_is_another
+    datatype: yesnoradio
+---
+code: |
+  if users[0].felony_convictions.number_gathered() >= 3:
+    users[0].felony_convictions.there_is_another = False
+---
+
+---
+id: your contact information
+question: |
+  What is your contact information?
+subquestion: |
+  The court or other parties might need to contact you about this case.
+
+  **This information will appear on your court forms.**
+  
+  If you do not want to list a phone number on your forms, leave it blank.
+
+  If you have an email address, you must list it. Be sure to check your email daily, otherwise you may miss important court documents or information about your case.
+
+  ${ collapse_template(contact_info_help) }  
+fields:  
+  - Phone number: users[0].phone_number
+    datatype: al_international_phone
+    required: False
+  - label: |
+      Do you have an email address?
+    field: users[0].has_email_address      
+    datatype: yesnoradio
+  - note: |
+      This email address will appear on your court forms. Be sure to check 
+      this email daily, otherwise you may miss important information about 
+      your case.
+    show if:
+      variable: users[0].has_email_address
+      is: True
+  - Email address: users[0].email    
+    datatype: email
+    show if: 
+      variable: users[0].has_email_address
+      is: True
+---
+template: contact_info_help
 subject: |
-  **What if I need more space?**
-content: |
-  If the person has a long name like "Jane Smith, Director of Housing," select **Business or organization**. You can then enter the full name and title.
+  **What if I don't want to list my email address?**
+content: |  
+  If you do not want to enter your personal email address, you can create a new email account to get email about your case.
+  
+  To make a new email account try one of these email services:
+  
+  * [**Gmail**](https://accounts.google.com/SignUp)
+  * [**Outlook**](https://outlook.live.com/owa/?nlp=1&signup=1)
+  * [**Yahoo**](https://login.yahoo.com/account/create?.lang=en-US&.intl=us)
+
+
+
+
+
+
+
+
+
+
+
 ---
 id: filing county
 question: |
   In which county will you file your *${ form_name }*?
 subquestion: |
-  You should file in the county where **CHILD** lives.
+  You should file in the county where ${child.name_full()} lives.
 fields:
   - County: filing_county
     code:
