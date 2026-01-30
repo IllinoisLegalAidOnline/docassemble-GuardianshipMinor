@@ -922,7 +922,22 @@ id: guardian willing and able
 question: |
   Are you willing and able to act as guardian of ${child.name_full()}?
 subquestion: |
-  Being willing and able means that you will be responsible for the health, welfare, and education of ${child.name_full()}.
+  % if guardianship_type == "person":
+  A guardian of the person is responsible for ${child.name_full()}'s:
+
+  * Safety,
+  * Physical and emotional well-being,
+  * Housing,
+  * Education,
+  * Nutrition, and
+  * Medical care.
+  % endif
+  % if guardianship_type == "both":
+  [NEWLINE]
+  % endif
+  % if guardianship_type == "estate":
+  A guardian of the estate is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
+  % endif
 fields:
   - no label: users[0].is_willing
     datatype: yesnoradio
@@ -932,7 +947,15 @@ event: guardian_not_willing
 question: |
   Sorry
 subquestion: |
-  You must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as a guardian.
+  % if guardianship_type == "person":
+  You must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as guardian of the person.
+  % endif
+  % if guardianship_type == "both":
+  [NEWLINE]
+  % endif
+  % if guardianship_type == "estate":
+  You must be willing and able to be responsible for the care, management, and investment of ${child.name_full()}'s money and property to be appointed as guardian of the estate.
+  % endif
   
   Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
@@ -1177,9 +1200,24 @@ subquestion: |
 ---
 id: co-guardian willing and able
 question: |
-  Is ${users[1].name_full()} willing and able to act as guardian of ${child.name_full()}?
+  Is ${users[1].name_full()} willing and able to act as co-guardian of ${child.name_full()}?
 subquestion: |
-  Being willing and able means that ${users[1].name_full()} will be responsible for the health, welfare, and education of ${child.name_full()}.
+  % if guardianship_type == "person":
+  A co-guardian of the person is responsible for ${child.name_full()}'s:
+
+  * Safety,
+  * Physical and emotional well-being,
+  * Housing,
+  * Education,
+  * Nutrition, and
+  * Medical care.
+  % endif
+  % if guardianship_type == "both":
+  [NEWLINE]
+  % endif
+  % if guardianship_type == "estate":
+  A co-guardian of the estate is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
+  % endif
 fields:
   - no label: users[1].is_willing
     datatype: yesnoradio
@@ -1189,7 +1227,15 @@ continue button field: co_guardian_not_willing
 question: |
   Sorry
 subquestion: |
-  ${users[1].name_full()} must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as a guardian.
+  % if guardianship_type == "person":
+  ${users[1].name_full()} must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as co-guardian of the person.
+  % endif
+  % if guardianship_type == "both":
+  [NEWLINE]
+  % endif
+  % if guardianship_type == "estate":
+  ${users[1].name_full()} must be willing and able to be responsible for the care, management, and investment of ${child.name_full()}'s money and property to be appointed as co-guardian of the estate.
+  % endif
 
   Click **Back** if you made a mistake, or click **Next** to continue making forms for you as the guardian.
 ---
