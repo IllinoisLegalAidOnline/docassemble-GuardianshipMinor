@@ -122,14 +122,29 @@ code: |
         if users[1].has_felony_conviction:
           users[1].felony_convictions.gather()
 
-
-
+  oath_intro
+  if guardianship_type != "estate":
+    if not oath_person_agree:
+      oath_required
+  if guardianship_type != "person":
+    if not oath_estate_agree:
+      oath_required
+    else:
+      bond_info
   
   
   set_progress(90)
   nav.set_section('section_filing')  
   filing_county
+
+
+  notice_intro
+
+
   
+  if has_court_date:
+    hearing_date
+  attend_court  
 
   set_progress(100)
   nav.set_section('section_download')
@@ -1007,11 +1022,6 @@ fields:
   - no label: users[0].found_negligent
     datatype: yesnoradio
 ---
-
-
-
-
----
 id: any felony convictions
 generic object: ALPeopleList
 question: |
@@ -1091,9 +1101,6 @@ content: |
   A person with a felony conviction that involves harm or threat to a minor cannot be appointed guardian of a minor.
   
   If that person has a felony conviction that does not involve harm or threat to a minor, they may still be appointed if the judge finds it to be in the minor's best interest.
-
-
-
 ---
 id: any other felony convictions
 generic object: ALPeopleList
@@ -1292,8 +1299,96 @@ code: |
   if users[1].felony_convictions.number_gathered() >= 3:
     users[1].felony_convictions.there_is_another = False
 ---
+id: oath intro
+continue button field: oath_intro
+question: |
+  Oath required for guardianship
+subquestion: |
+  UPDATE
+
+  Download form & bring to court
+---
+id: oath person check
+question: |
+  % if valid_co_guardian():
+  Do you and ${ users[1].name_full() } agree to terms of Oath PERSON?
+  % else:
+  Do you agree to terms of Oath PERSON?
+  % endif
+subquestion: |
+  % if valid_co_guardian():
+  UPDATE You and ${ users[1].name_full() }:
+  % else:
+  UPDATE You:
+  % endif
+
+  TERMS of guardianship PERSON
+
+fields:
+  - no label: oath_person_agree
+    datatype: yesnoradio
+---
+id: oath estate check
+question: |
+  % if valid_co_guardian():
+  Do you and ${ users[1].name_full() } agree to terms of Oath ESTATE?
+  % else:
+  Do you agree to terms of Oath ESTATE?
+  % endif
+subquestion: |
+  % if valid_co_guardian():
+  UPDATE You and ${ users[1].name_full() }:
+  % else:
+  UPDATE You:
+  % endif
+
+  TERMS of guardianship ESTATE
+
+fields:
+  - no label: oath_estate_agree
+    datatype: yesnoradio
 
 
+
+---
+id: oath required kick out
+event: oath_required
+question: |
+  Sorry
+subquestion: |
+  % if valid_co_guardian():
+  UPDATE You and ${ users[1].name_full() } must
+  % else:
+  UPDATE You must
+  % endif
+  
+  USE logic to include info about person & estate & both - or separate screens?
+
+  Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: bond info
+continue button field: bond_info
+question: |
+  Bond required for guardianship of estate
+subquestion: |
+  UPDATE
+
+  Explain process and guess at amount based on minor info
+---
+code: |
+  def valid_co_guardian():
+  
+    if add_co_guardian:
+      if users[1].age_in_years() >= 18:
+        if users[1].is_willing:
+  	      return True
+  	  return False
+    else:
+      return False
+---
 
 
 
@@ -1307,7 +1402,107 @@ fields:
   - County: filing_county
     code:
       court_list._load_courts()["address_county"].unique()
+---
+id: notice intro
+continue button field: notice_intro
+question: |
+  Notify parents and relatives of guardianship
+subquestion: |
+  UPDATE with info from instructions
 
+  Must give notice to these people.
+
+  Notice is done differently depending on where you file. Usually deliver in person or send by certified mail. Must be given notice seven days before hearing. If you do not know address of people, you will have to post notice in newspaper.
+
+  If any agree parents and relatives to guardianship, they can sign a CONSENT & APPEARANCE form. If they do & file with court, then you do not need to give them notice.
+
+  The next screens will ask questions that will help you figure out how you can give them notice or get their consent. At the end of this program, you can download forms and instructions to guide you through the next steps.
+
+---
+id: hearing scheduled
+question: |
+  Do you already have a court date scheduled for your Guardianship hearing?
+subquestion: |
+  In some counties, the circuit clerk can give you a hearing date before you file your petition. In other counties, you will get a hearing date when you file your petition. If you have this information now, you can add it to your forms.
+  
+  If the clerk gives you the hearing date after you file your *${form_name}*, you can add it to your Notice forms later. 
+  
+  **Note:** Be sure to add the hearing information to your *Notice of Hearing on Petition for Guardianship of a Minor* before you send it to other parties in your case.
+fields:
+  - "Know court date and time?": has_court_date
+    datatype: yesnoradio
+---
+id: hearing info
+question: |
+  Court hearing date and time
+subquestion: |
+  Enter the date and time of the court hearing.
+
+  If you do not have this information now, you can click **Back** and change your answer.
+
+  **Note:** Be sure to add the hearing information to your *Notice of Hearing on Petition for Guardianship of a Minor* before you send it to other parties in your case.
+fields:
+  - Hearing date: hearing_date
+    datatype: date
+    min: ${ today().format("yyyy-MM-dd") }
+  - Hearing time: hearing_time
+    datatype: time
+---
+id: hearing appearance info
+question: |
+  How to attend the court hearing
+subquestion: |
+  Your court date could be in person, by phone, or by video. If your court date is by phone or video, it is called a "Remote Appearance."
+  
+  Enter the court date details below. If the clerk did not give you this information yet, leave it blank. You can add it to the *Notice of Hearing on Petition for Guardianship of a Minor* after you file your petition.
+  
+  **Note:** Be sure to add the hearing information to your *Notice of Hearing on Petition for Guardianship of a Minor* before you send it to other parties in your case.
+
+  ${ collapse_template(hearing_info_help) }  
+fields:
+  - Courtroom number: courtroom
+    maxlength: 10
+    required: False
+  - How to attend court (check all that apply): attend_court
+    datatype: checkboxes
+    choices:
+      - In person: in_person
+      - Remotely: remote
+    none of the above: |
+      I don't know. I will add this to my forms later.
+  - Video conference website (URL): remote_website
+    maxlength: 100
+    input type: area
+    rows: 2
+    required: False
+    show if:
+      variable: attend_court['remote']
+      is: True
+  - Video conference log-in information (Meeting ID, password, etc.): remote_login
+    maxlength: 100
+    input type: area
+    rows: 2
+    required: False
+    show if:
+      variable: attend_court['remote']
+      is: True
+  - Call-in phone number for remote appearance: remote_phone
+    datatype: al_international_phone
+    required: False
+    show if:
+      variable: attend_court['remote']
+      is: True
+
+---
+template: hearing_info_help
+subject: |
+  **See where to put hearing information on your forms**
+content: |  
+  You can put information on how to attend court on the bottom of page 1 of the *Notice of Hearing on Petition for Guardianship of a Minor*. If needed, you can also put it on the *Minor Guardianship Publication Information for Newspaper*.
+
+  We will add the courtroom address to your forms. To get the other information, contact your Circuit Clerk. You can look up how to contact them using [**Find Your Court**](https://www.illinoiscourts.gov/courts-directory/interactive-map/by-court-type/) on the Illinois Courts website.
+  
+  [FILE guardianship_hearing.png, 100%, Notice of Hearing Court Date Information example]
 ---
 id: e-signature
 question: |
