@@ -526,7 +526,7 @@ fields:
     show if:
       variable: parents[i].not_found
       is: True
-  - "${parents[i].name_full()} is unable or unwilling to take care of  ${child.name_full()}.": parents[i].unable
+  - "${parents[i].name_full()} is unable or unwilling to take care of ${child.name_full()}.": parents[i].unable
     datatype: yesno
 ---
 id: any legal parents
@@ -600,6 +600,8 @@ fields:
     js show if: |
       val('other_cases[0].in_us') && val('other_cases[0].state') === "IL"
   - Country (outside US): other_cases[0].non_us_country
+    code: |
+      countries_list()
     show if: 
       variable: other_cases[0].in_us
       is: False
@@ -1905,17 +1907,87 @@ review:
       $${thousands(income_value, show_decimals=True)}
       % endif
 
-
-
-
-
-
-
-
-      
   - note: |
       <h4>Child's parents, caregivers, and relatives</h4>
+  - Edit: has_legal_parent
+    button: |
+      **Does ${child.name_full()} have at least one legal parent?**
+      ${ word(yesno(has_legal_parent)) }
+  - Edit: parents[0].name.first
+    button: |
+      **Parent's name:**
+      ${ parents[0].name_full()  }
+    show if: has_legal_parent
+  - Edit: parents[0].agrees
+    button: |
+      **Information about ${ parents[0].name_full() }:**
+      
+      % if parents[0].agrees:
+      * ${parents[0].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[0].is_dead:
+      * ${parents[0].name_full()} died on ${ parents[0].decease_date }.
+      % endif
+      % if parents[0].gave_up_custody:
+      * ${parents[0].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[0].not_found:
+      * ${parents[0].name_full()} cannot be found. Last contact was on ${parents[0].last_contact_date} at ${parents[0].last_contact_location}.
+      % endif
+      % if parents[0].unable:
+      * ${parents[0].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent
+  - Edit: has_another_parent
+    button: |
+      **Does ${child.name_full()} have another legal parent?**
+      ${ word(yesno(has_legal_parent)) }
+    show if: has_legal_parent
+  - Edit: parents[1].name.first
+    button: |
+      **Second parent's name:**
+      ${ parents[1].name_full()  }
+    show if: has_legal_parent and has_another_parent
+  - Edit: parents[1].agrees
+    button: |
+      **Information about ${ parents[1].name_full() }:**
+      
+      % if parents[1].agrees:
+      * ${parents[1].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[1].is_dead:
+      * ${parents[1].name_full()} died on ${ parents[1].decease_date }.
+      % endif
+      % if parents[1].gave_up_custody:
+      * ${parents[1].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[1].not_found:
+      * ${parents[1].name_full()} cannot be found. Last contact was on ${parents[1].last_contact_date} at ${parents[1].last_contact_location}.
+      % endif
+      % if parents[1].unable:
+      * ${parents[1].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent and has_another_parent
+  - Edit: other_case_involving_parents
+    button: |
+      **Do you know of any court cases that involve ${child.name_full()} or their parents?**
+      ${ word(yesno(other_case_involving_parents)) }
+  - Edit: other_cases.revisit
+    button: |
+      **Other cases with ${child.name_full()} or their parents: (Edit to change details)**
 
+      % for case in other_cases:
+      % if case.in_us:
+      % if case.state == "IL":
+      * ${ case.name.text } in ${ case.county } County, Illinois
+      % else:
+      * ${ case.name.text } in ${ state_name(case.state) }
+      % endif
+      % else:
+      * ${ case.name.text } in ${ country_name(case.non_us_country) }
+      % endif
+      % endfor
+    show if: other_case_involving_parents  
 
   - note: |
       <h4>Guardian</h4>
@@ -1923,6 +1995,37 @@ review:
 
   - note: |
       <h4>Filing, notice, and delivery</h4>
+
+
+
+---
+id: other cases revisit review screen
+continue button field: other_cases.revisit
+question: |
+  Edit the other court cases with ${child.name_full()} or their parents
+subquestion: |
+  ${ other_cases.table }
+
+  % if other_cases.number_gathered() < 8:
+  ${ other_cases.add_action() }
+  % endif
+---
+table: other_cases.table
+rows: other_cases
+columns:
+  - Case number: |
+      row_item.name.text if defined("row_item.name.text") else ""
+  - Location: |
+      country_name(row_item.non_us_country) if not row_item.in_us else state_name(row_item.state) if not row_item.state == "IL" else row_item.county + " County, Illinois"
+edit:
+  - name.text
+delete buttons: True
+confirm: True
+
+
+
+
+
 
 
 ---
