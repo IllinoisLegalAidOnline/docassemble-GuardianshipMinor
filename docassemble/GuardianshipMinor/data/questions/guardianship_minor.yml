@@ -1987,8 +1987,48 @@ review:
       * ${ case.name.text } in ${ country_name(case.non_us_country) }
       % endif
       % endfor
-    show if: other_case_involving_parents  
+    show if: other_case_involving_parents
 
+  - Edit: caregivers.revisit
+    button: |
+      **Adult caregivers that live with ${child.name_full()}: (Edit to change details)**
+
+      % for person in caregivers:
+      * ${ person.name_full() }, ${ person.relationship }
+      % endfor
+  - Edit: minor_is_married
+    button: |
+      **Is ${child.name_full()} married?**
+      ${ word(yesno(minor_is_married)) }      
+  - Edit: spouse.name.first
+    button: |
+      **Spouse's name:**
+      ${ spouse.name_full()  }
+    show if: minor_is_married
+  - Edit: spouse.address.unknown
+    button: |
+      **${spouse.name_full()}'s current address:**
+      % if spouse.address.unknown:
+      Unknown
+      % else:
+      ${ spouse.address.on_one_line(bare=True) }
+      % endif
+    show if: minor_is_married
+  - Edit: adult_relatives.there_are_any
+    button: |
+      **Does ${child.name_full()} have any adult relatives?**
+      ${ word(yesno(adult_relatives.there_are_any))}
+    show if: not minor_is_married
+  - Edit: adult_relatives.revisit
+    button: |
+      **${child.name_full()}'s adult relatives: (Edit to change name, relationship, and address)**
+
+      % for person in adult_relatives:
+      * ${ person.name_full() }, ${ person.relationship }
+      % endfor
+    show if: not minor_is_married
+  
+      
   - note: |
       <h4>Guardian</h4>
 
@@ -2021,6 +2061,90 @@ edit:
   - name.text
 delete buttons: True
 confirm: True
+---
+id: caregivers revisit review screen
+continue button field: caregivers.revisit
+question: |
+  Edit the adult caregivers that live with ${child.name_full()}
+subquestion: |  
+  ${ caregivers.table }
+
+  % if caregivers.number_gathered() < 4:
+  ${ caregivers.add_action() }
+  % endif
+---
+table: caregivers.table
+rows: caregivers
+columns:
+  - Name: |
+      row_item.name_full() if defined("row_item.name.first") else ""
+  - Relationship to ${child.name_full()}: |
+      row_item.relationship if defined("row_item.relationship") else ""
+edit:
+  - review_caregiver_details
+delete buttons: True
+confirm: True
+---
+id: caregiver details
+continue button field: x.review_caregiver_details
+generic object: ALIndividual
+question: |
+  Edit ${ x.name_full() }'s information
+review: 
+  - Edit: x.name.first
+    button: |
+      **Name:**
+      ${ x.name_full()  }
+  - Edit: x.relationship
+    button: |
+      **Relationship to ${child.name_full()}:**
+      ${ x.relationship }
+---
+id: adult relatives revisit review screen
+continue button field: adult_relatives.revisit
+question: |
+  Edit ${child.name_full()}'s adult relatives 
+subquestion: |  
+  ${ adult_relatives.table }
+
+  % if adult_relatives.number_gathered() < ( 10-caregivers.number() ):
+  ${ adult_relatives.add_action() }
+  % endif
+---
+table: adult_relatives.table
+rows: adult_relatives
+columns:
+  - Name: |
+      row_item.name_full() if defined("row_item.name.first") else ""
+  - Relationship to ${child.name_full()}: |
+      row_item.relationship if defined("row_item.relationship") else ""
+edit:
+  - review_adult_relative_details
+delete buttons: True
+confirm: True
+---
+id: adult relative details
+continue button field: x.review_adult_relative_details
+generic object: ALIndividual
+question: |
+  Edit ${ x.name_full() }'s information
+review: 
+  - Edit: x.name.first
+    button: |
+      **Name:**
+      ${ x.name_full()  }
+  - Edit: x.relationship
+    button: |
+      **Relationship to ${child.name_full()}:**
+      ${ x.relationship }
+  - Edit: x.address.unknown
+    button: |
+      **Current address:**
+      % if x.address.unknown:
+      Unknown
+      % else:
+      ${ x.address.on_one_line(bare=True) }
+      % endif
 
 
 
@@ -2095,4 +2219,130 @@ review:
       % else:
       $${thousands(income_value, show_decimals=True)}
       % endif
+---
+id: family review screen
+section: Child's parents, caregivers, and relatives
+event: section_family
+question: |
+  Information about ${child.name_full()}'s parents, caregivers, and relatives
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: has_legal_parent
+    button: |
+      **Does ${child.name_full()} have at least one legal parent?**
+      ${ word(yesno(has_legal_parent)) }
+  - Edit: parents[0].name.first
+    button: |
+      **Parent's name:**
+      ${ parents[0].name_full()  }
+    show if: has_legal_parent
+  - Edit: parents[0].agrees
+    button: |
+      **Information about ${ parents[0].name_full() }:**
+      
+      % if parents[0].agrees:
+      * ${parents[0].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[0].is_dead:
+      * ${parents[0].name_full()} died on ${ parents[0].decease_date }.
+      % endif
+      % if parents[0].gave_up_custody:
+      * ${parents[0].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[0].not_found:
+      * ${parents[0].name_full()} cannot be found. Last contact was on ${parents[0].last_contact_date} at ${parents[0].last_contact_location}.
+      % endif
+      % if parents[0].unable:
+      * ${parents[0].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent
+  - Edit: has_another_parent
+    button: |
+      **Does ${child.name_full()} have another legal parent?**
+      ${ word(yesno(has_legal_parent)) }
+    show if: has_legal_parent
+  - Edit: parents[1].name.first
+    button: |
+      **Second parent's name:**
+      ${ parents[1].name_full()  }
+    show if: has_legal_parent and has_another_parent
+  - Edit: parents[1].agrees
+    button: |
+      **Information about ${ parents[1].name_full() }:**
+      
+      % if parents[1].agrees:
+      * ${parents[1].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[1].is_dead:
+      * ${parents[1].name_full()} died on ${ parents[1].decease_date }.
+      % endif
+      % if parents[1].gave_up_custody:
+      * ${parents[1].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[1].not_found:
+      * ${parents[1].name_full()} cannot be found. Last contact was on ${parents[1].last_contact_date} at ${parents[1].last_contact_location}.
+      % endif
+      % if parents[1].unable:
+      * ${parents[1].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent and has_another_parent
+  - Edit: other_case_involving_parents
+    button: |
+      **Do you know of any court cases that involve ${child.name_full()} or their parents?**
+      ${ word(yesno(other_case_involving_parents)) }
+  - Edit: other_cases.revisit
+    button: |
+      **Other cases with ${child.name_full()} or their parents: (Edit to change details)**
 
+      % for case in other_cases:
+      % if case.in_us:
+      % if case.state == "IL":
+      * ${ case.name.text } in ${ case.county } County, Illinois
+      % else:
+      * ${ case.name.text } in ${ state_name(case.state) }
+      % endif
+      % else:
+      * ${ case.name.text } in ${ country_name(case.non_us_country) }
+      % endif
+      % endfor
+    show if: other_case_involving_parents
+
+  - Edit: caregivers.revisit
+    button: |
+      **Adult caregivers that live with ${child.name_full()}: (Edit to change details)**
+
+      % for person in caregivers:
+      * ${ person.name_full() }, ${ person.relationship }
+      % endfor
+  - Edit: minor_is_married
+    button: |
+      **Is ${child.name_full()} married?**
+      ${ word(yesno(minor_is_married)) }      
+  - Edit: spouse.name.first
+    button: |
+      **Spouse's name:**
+      ${ spouse.name_full()  }
+    show if: minor_is_married
+  - Edit: spouse.address.unknown
+    button: |
+      **${spouse.name_full()}'s current address:**
+      % if spouse.address.unknown:
+      Unknown
+      % else:
+      ${ spouse.address.on_one_line(bare=True) }
+      % endif
+    show if: minor_is_married
+  - Edit: adult_relatives.there_are_any
+    button: |
+      **Does ${child.name_full()} have any adult relatives?**
+      ${ word(yesno(adult_relatives.there_are_any))}
+    show if: not minor_is_married
+  - Edit: adult_relatives.revisit
+    button: |
+      **${child.name_full()}'s adult relatives: (Edit to change name, relationship, and address)**
+
+      % for person in adult_relatives:
+      * ${ person.name_full() }, ${ person.relationship }
+      % endfor
+    show if: not minor_is_married
