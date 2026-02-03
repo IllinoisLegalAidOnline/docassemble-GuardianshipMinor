@@ -373,7 +373,7 @@ fields:
 ---
 id: current short-term guardianship
 question: |
-  Is there a short-term guardian for ${child.name_full()}?
+  Is there a current short-term guardian for ${child.name_full()}?
 subquestion: |
   Parents can have a written agreement for someone to temporarily be the guardian without any court involvement.
 
@@ -1417,7 +1417,7 @@ fields:
       - "The child, who is at least 14 years old": minor
       - "Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}": custody
       - "A person with a different relationship to ${ child.name_full() }": other
-  - "Other relationship": other
+  - "Other relationship": x[i].other_notice_relationship
     maxlength: 40
     show if:
       variable: x[i].notice_relationship
@@ -1832,3 +1832,164 @@ attachment:
   fields:
       - "fake": ${ "" }
   
+
+
+
+---
+############### Review page
+id: review screen
+event: review_answers
+question: |
+  Review screen
+subquestion: |
+  Edit your answers below.
+review: 
+  - note: |
+      <h4>Child</h4>
+  - Edit: child.name.first
+    button: |
+      **Child's name:**
+      ${ child.name_full()  }
+  - Edit: child.birthdate
+    button: |
+      **${ child.name_full() }'s birth date:**
+      ${ child.birthdate }
+  - Edit: child.address.address
+    button: |
+      **${ child.name_full() }'s current address:**[NEWLINE]
+      ${ child.address.on_one_line(bare=True) }
+  - Edit: previous_standby
+    button: |
+      **Has a judge appointed a standby guardian for ${child.name_full()}?**
+      ${ word(yesno(previous_standby)) }
+  - Edit: current_stg
+    button: |
+      **Is there a short-term guardian for ${child.name_full()}?**
+      ${ word(yesno(current_stg)) }
+  - Edit: named_in_will
+    button: |
+      **Were you named as ${child.name_full()}'s guardian in their parent's will or in another document?**
+      ${ word(yesno(named_in_will)) }
+  - Edit: immigration_separation
+    button: |
+      **Have Immigration officers separated ${child.name_full()} from their parents?**
+      ${ word(yesno(immigration_separation)) }
+  - Edit: guardianship_type
+    button: |
+      **What kind of guardianship of ${child.name_full()} are you asking for?**[NEWLINE]
+      % if guardianship_type == "person":
+      Person only
+      % elif guardianship_type == "estate":
+      Estate (property) only
+      % else:
+      Both person and estate (property)
+      % endif
+  - Edit: child_estate
+    button: |
+      **What is the current value of ${child.name_full()}'s estate?**[NEWLINE]
+      % if child_estate == "unknown":
+      I don't know.
+      % elif child_estate == "zero":
+      $0 - ${child.name_full()} has no property, assets or saved money.
+      % else:
+      $${thousands(estate_value, show_decimals=True)}
+      % endif
+  - Edit: child_income
+    button: |
+      **What is the ${child.name_full()}'s annual income, including Social Security, SSI, and other public benefits?**[NEWLINE]
+      % if child_income == "unknown":
+      I don't know.
+      % elif child_income == "zero":
+      $0 - ${child.name_full()} has no annual income.
+      % else:
+      $${thousands(income_value, show_decimals=True)}
+      % endif
+
+
+
+
+
+
+
+
+      
+  - note: |
+      <h4>Child's parents, caregivers, and relatives</h4>
+
+
+  - note: |
+      <h4>Guardian</h4>
+
+
+  - note: |
+      <h4>Filing, notice, and delivery</h4>
+
+
+---
+id: child review screen
+section: Child
+event: section_child
+question: |
+  Child information
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: child.name.first
+    button: |
+      **Child's name:**
+      ${ child.name_full()  }
+  - Edit: child.birthdate
+    button: |
+      **${ child.name_full() }'s birth date:**
+      ${ child.birthdate }
+  - Edit: child.address.address
+    button: |
+      **${ child.name_full() }'s current address:**[NEWLINE]
+      ${ child.address.on_one_line(bare=True) }
+  - Edit: previous_standby
+    button: |
+      **Has a judge appointed a standby guardian for ${child.name_full()}?**
+      ${ word(yesno(previous_standby)) }
+  - Edit: current_stg
+    button: |
+      **Is there a short-term guardian for ${child.name_full()}?**
+      ${ word(yesno(current_stg)) }
+  - Edit: named_in_will
+    button: |
+      **Were you named as ${child.name_full()}'s guardian in their parent's will or in another document?**
+      ${ word(yesno(named_in_will)) }
+  - Edit: immigration_separation
+    button: |
+      **Have Immigration officers separated ${child.name_full()} from their parents?**
+      ${ word(yesno(immigration_separation)) }
+  - Edit: guardianship_type
+    button: |
+      **What kind of guardianship of ${child.name_full()} are you asking for?**[NEWLINE]
+      % if guardianship_type == "person":
+      Person only
+      % elif guardianship_type == "estate":
+      Estate (property) only
+      % else:
+      Both person and estate (property)
+      % endif
+  - Edit: child_estate
+    button: |
+      **What is the current value of ${child.name_full()}'s estate?**[NEWLINE]
+      % if child_estate == "unknown":
+      I don't know.
+      % elif child_estate == "zero":
+      $0 - ${child.name_full()} has no property, assets or saved money.
+      % else:
+      $${thousands(estate_value, show_decimals=True)}
+      % endif
+  - Edit: child_income
+    button: |
+      **What is the ${child.name_full()}'s annual income, including Social Security, SSI, and other public benefits?**[NEWLINE]
+      % if child_income == "unknown":
+      I don't know.
+      % elif child_income == "zero":
+      $0 - ${child.name_full()} has no annual income.
+      % else:
+      $${thousands(income_value, show_decimals=True)}
+      % endif
+
