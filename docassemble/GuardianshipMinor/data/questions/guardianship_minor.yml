@@ -2096,6 +2096,10 @@ review:
       **Your email:**
       ${ users[0].email }
     show if: users[0].has_email_address
+  - Edit: e_signature
+    button: |
+      **Do you want to add your e-signature to your forms?**
+      ${ word(yesno(e_signature)) }
   - Edit: add_co_guardian
     button: |
       **Do you want someone to be a co-guardian of ${child.name_full()} with you?**
@@ -2162,6 +2166,81 @@ review:
   
   - note: |
       <h4>Filing, notice, and delivery</h4>
+  - Edit: parents.revisit
+    button: |
+      **Edit how ${ child.name_full() }'s parents will be notified**
+    show if: has_legal_parent
+
+  - Edit: filing_county
+    button: |
+      **County where you will file the petition:**
+      ${ filing_county }
+      
+  - Edit: has_court_date
+    button: |
+      **Do you already have a court date scheduled for your Guardianship hearing?**
+      ${ word(yesno(has_court_date)) }
+  - Edit: hearing_date
+    button: |
+      **Court hearing on:**
+      ${ hearing_date } at ${ format_time(hearing_time, "h:mm a") }
+    show if: has_court_date
+  - Edit: attend_court
+    button: |
+      **How can parties attend court?**
+      
+      % if attend_court['in_person'] == True:
+        * In person
+      % endif
+      % if attend_court['remote'] == True:
+        * Remotely
+      % endif
+      % if attend_court['in_person'] == False and attend_court['remote'] == False:
+        * I don't know. I will add this to my forms later. 
+      % endif
+  - Edit: courtroom
+    button: |
+      **Courtroom:**
+      % if courtroom != "":
+      ${ courtroom }
+      % else:
+      None entered
+      % endif
+  - Edit: remote_website
+    button: |
+      **Video conference website (URL):**
+      % if remote_website != "":
+      ${ remote_website }
+      % else:
+      None entered
+      % endif
+    show if: attend_court['remote'] == True
+  - Edit: remote_login
+    button: |
+      **Video conference log-in information:**
+      % if remote_login != "":
+      ${ remote_login }
+      % else:
+      None entered
+      % endif
+    show if: attend_court['remote'] == True
+  - Edit: remote_phone
+    button: |
+      **Call-in phone number for remote appearance:**
+      % if remote_phone != "":
+      ${ phone_number_formatted(remote_phone) }
+      % else:
+      None entered
+      % endif
+    show if: attend_court['remote'] == True      
+      
+  - Edit: e_signature
+    button: |
+      **Do you want to add your e-signature to your forms?**
+      ${ word(yesno(e_signature)) }
+
+
+
 
 
 
@@ -2306,8 +2385,15 @@ edit:
 delete buttons: True
 confirm: True
 ---
-
-
+id: parents revisit review screen
+continue button field: parents.revisit
+section: Child's parents, caregivers, and relatives
+question: |
+  Edit how ${child.name_full()}'s parents will be notified
+subquestion: |
+  UPDATE
+  
+  ${ adult_relatives.table }
 
 
 
@@ -2581,6 +2667,10 @@ review:
       **Your email:**
       ${ users[0].email }
     show if: users[0].has_email_address
+  - Edit: e_signature
+    button: |
+      **Do you want to add your e-signature to your forms?**
+      ${ word(yesno(e_signature)) }
   - Edit: add_co_guardian
     button: |
       **Do you want someone to be a co-guardian of ${child.name_full()} with you?**
