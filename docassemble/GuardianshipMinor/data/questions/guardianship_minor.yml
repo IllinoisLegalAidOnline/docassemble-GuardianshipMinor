@@ -1338,9 +1338,9 @@ subquestion: |
 id: oath person check
 question: |
   % if valid_co_guardian():
-  Do you and ${ users[1].name_full() } agree to terms of Oath PERSON?
+  Do you and ${ users[1].name_full() } agree to the terms of guardianship of the person?
   % else:
-  Do you agree to terms of Oath PERSON?
+  Do you agree to the terms of guardianship of the person?
   % endif
 subquestion: |
   % if valid_co_guardian():
@@ -1358,9 +1358,9 @@ fields:
 id: oath estate check
 question: |
   % if valid_co_guardian():
-  Do you and ${ users[1].name_full() } agree to terms of Oath ESTATE?
+  Do you and ${ users[1].name_full() } agree to the terms of guardianship of the estate?
   % else:
-  Do you agree to terms of Oath ESTATE?
+  Do you agree to the terms of guardianship of the estate?
   % endif
 subquestion: |
   % if valid_co_guardian():
@@ -2047,14 +2047,14 @@ review:
     button: |
       **When were you born?**
       ${ users[0].birthdate }
-  - Edit: users[0].address.address
-    button: |
-      **Your address:**[NEWLINE]
-      ${ users[0].address.on_one_line(bare=True) }
   - Edit: users[0].is_willing
     button: |
       **Are you willing and able to act as guardian of ${child.name_full()}?**
       ${word(yesno(users[0].is_willing))}
+  - Edit: users[0].address.address
+    button: |
+      **Your address:**[NEWLINE]
+      ${ users[0].address.on_one_line(bare=True) }
   - Edit: users[0].job
     button: |
       **What is your current job?**
@@ -2063,9 +2063,102 @@ review:
     button: |
       **Has a judge found you disabled and appointed you a Guardian?**
       ${ word(yesno(users[0].is_disabled))}
+  - Edit: users[0].found_negligent
+    button: |
+      **Have you been found to have neglected or abused any minor by DCFS or in court?**
+      ${ word(yesno(users[0].found_negligent))}
+  - Edit: users[0].has_felony_conviction
+    button: |
+      **Do you have any felony convictions?**
+      ${ word(yesno(users[0].has_felony_conviction)) }
+  - Edit: users[0].felony_convictions.revisit
+    button: |
+      **Your past felony convictions: (Edit to change details)**
 
+      % for conviction in users[0].felony_convictions:
+      * Date: ${conviction.date}, Charge: ${ conviction.name.text }
+      % endfor
+    show if: users[0].has_felony_conviction
+  - Edit: users[0].phone_number
+    button: |
+      **Your phone number:**
+      % if users[0].phone_number == "":
+      None entered
+      % else:
+      ${ phone_number_formatted(users[0].phone_number) }
+      % endif
+  - Edit: users[0].has_email_address
+    button: |
+      **Do you have an email address?**
+      ${ word(yesno(users[0].has_email_address)) }
+  - Edit: users[0].email
+    button: |
+      **Your email:**
+      ${ users[0].email }
+    show if: users[0].has_email_address
+  - Edit: add_co_guardian
+    button: |
+      **Do you want someone to be a co-guardian of ${child.name_full()} with you?**
+      ${word(yesno(add_co_guardian))}
+  - Edit: users[1].name.first
+    button: |
+      **Co-guardian's name:**
+      ${ users[1].name_full() }
+    show if: add_co_guardian
+  - Edit: users[1].birthdate
+    button: |
+      **When was ${ users[1].name_full() } born?**
+      ${ users[1].birthdate }
+    show if: add_co_guardian
+  - Edit: users[1].is_willing
+    button: |
+      **Is ${ users[1].name_full() } willing and able to act as guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_willing))}
+    show if: add_co_guardian
+  - Edit: users[1].address.address
+    button: |
+      **${ users[1].name_full() }'s' address:**[NEWLINE]
+      ${ users[1].address.on_one_line(bare=True) }
+    show if: add_co_guardian
+  - Edit: users[1].job
+    button: |
+      **What is ${ users[1].name_full() }'s current job?**
+      ${users[1].job}
+    show if: add_co_guardian
+  - Edit: users[1].is_disabled
+    button: |
+      **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
+      ${ word(yesno(users[1].is_disabled))}
+    show if: add_co_guardian
+  - Edit: users[1].found_negligent
+    button: |
+      **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
+      ${ word(yesno(users[1].found_negligent))}
+    show if: add_co_guardian
+  - Edit: users[1].has_felony_conviction
+    button: |
+      **Does ${ users[1].name_full() } have any felony convictions?**
+      ${ word(yesno(users[1].has_felony_conviction)) }
+    show if: add_co_guardian
+  - Edit: users[1].felony_convictions.revisit
+    button: |
+      **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
 
+      % for conviction in users[1].felony_convictions:
+      * Date: ${conviction.date}, Charge: ${ conviction.name.text }
+      % endfor
+    show if: add_co_guardian and users[1].has_felony_conviction
+  - Edit: oath_person_agree
+    button: |
+      **Do all proposed guardians agree to the terms of guardianship of the person?**
+      ${ word(yesno(oath_person_agree)) }    
+  - Edit: oath_estate_agree
+    button: |
+      **Do all proposed guardians agree to the terms of guardianship of the estate?**
+      ${ word(yesno(oath_estate_agree)) }
 
+      
+      
   
   - note: |
       <h4>Filing, notice, and delivery</h4>
@@ -2075,6 +2168,7 @@ review:
 ---
 id: other cases revisit review screen
 continue button field: other_cases.revisit
+section: Child's parents, caregivers, and relatives
 question: |
   Edit the other court cases with ${child.name_full()} or their parents
 subquestion: |
@@ -2098,6 +2192,7 @@ confirm: True
 ---
 id: caregivers revisit review screen
 continue button field: caregivers.revisit
+section: Child's parents, caregivers, and relatives
 question: |
   Edit the adult caregivers that live with ${child.name_full()}
 subquestion: |  
@@ -2121,6 +2216,7 @@ confirm: True
 ---
 id: caregiver details
 continue button field: x.review_caregiver_details
+section: Child's parents, caregivers, and relatives
 generic object: ALIndividual
 question: |
   Edit ${ x.name_full() }'s information
@@ -2136,6 +2232,7 @@ review:
 ---
 id: adult relatives revisit review screen
 continue button field: adult_relatives.revisit
+section: Child's parents, caregivers, and relatives
 question: |
   Edit ${child.name_full()}'s adult relatives 
 subquestion: |  
@@ -2159,6 +2256,7 @@ confirm: True
 ---
 id: adult relative details
 continue button field: x.review_adult_relative_details
+section: Child's parents, caregivers, and relatives
 generic object: ALIndividual
 question: |
   Edit ${ x.name_full() }'s information
@@ -2179,6 +2277,49 @@ review:
       % else:
       ${ x.address.on_one_line(bare=True) }
       % endif
+---
+id: convictions revisit review screen
+continue button field: users[i].felony_convictions.revisit
+section: Guardian
+question: |
+  % if i==0:
+  Edit your felony convictions
+  % else:
+  Edit ${ users[1].name_full() }'s felony convictions
+  % endif
+subquestion: |
+  ${ users[i].felony_convictions.table }
+
+  % if users[i].felony_convictions.number_gathered() < 3:
+  ${ users[i].felony_convictions.add_action() }
+  % endif
+---
+table: users[i].felony_convictions.table
+rows: users[i].felony_convictions
+columns:
+  - Date: |
+      row_item.date if defined("row_item.date") else ""
+  - Charge: |
+      row_item.name.text if defined("row_item.name.text") else ""
+edit:
+  - date
+delete buttons: True
+confirm: True
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 id: child review screen
 section: Child
@@ -2373,3 +2514,131 @@ review:
       * ${ person.name_full() }, ${ person.relationship }
       % endfor
     show if: not minor_is_married
+
+---
+id: guardian review screen
+section: Guardian
+event: section_guardian
+question: |
+  Guardian information
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: users[0].name.first
+    button: |
+      **Your name:**
+      ${ users[0].name_full() }
+  - Edit: users[0].birthdate
+    button: |
+      **When were you born?**
+      ${ users[0].birthdate }
+  - Edit: users[0].is_willing
+    button: |
+      **Are you willing and able to act as guardian of ${child.name_full()}?**
+      ${word(yesno(users[0].is_willing))}
+  - Edit: users[0].address.address
+    button: |
+      **Your address:**[NEWLINE]
+      ${ users[0].address.on_one_line(bare=True) }
+  - Edit: users[0].job
+    button: |
+      **What is your current job?**
+      ${users[0].job}
+  - Edit: users[0].is_disabled
+    button: |
+      **Has a judge found you disabled and appointed you a Guardian?**
+      ${ word(yesno(users[0].is_disabled))}
+  - Edit: users[0].found_negligent
+    button: |
+      **Have you been found to have neglected or abused any minor by DCFS or in court?**
+      ${ word(yesno(users[0].found_negligent))}
+  - Edit: users[0].has_felony_conviction
+    button: |
+      **Do you have any felony convictions?**
+      ${ word(yesno(users[0].has_felony_conviction)) }
+  - Edit: users[0].felony_convictions.revisit
+    button: |
+      **Your past felony convictions: (Edit to change details)**
+
+      % for conviction in users[0].felony_convictions:
+      * Date: ${conviction.date}, Charge: ${ conviction.name.text }
+      % endfor
+    show if: users[0].has_felony_conviction
+  - Edit: users[0].phone_number
+    button: |
+      **Your phone number:**
+      % if users[0].phone_number == "":
+      None entered
+      % else:
+      ${ phone_number_formatted(users[0].phone_number) }
+      % endif
+  - Edit: users[0].has_email_address
+    button: |
+      **Do you have an email address?**
+      ${ word(yesno(users[0].has_email_address)) }
+  - Edit: users[0].email
+    button: |
+      **Your email:**
+      ${ users[0].email }
+    show if: users[0].has_email_address
+  - Edit: add_co_guardian
+    button: |
+      **Do you want someone to be a co-guardian of ${child.name_full()} with you?**
+      ${word(yesno(add_co_guardian))}
+  - Edit: users[1].name.first
+    button: |
+      **Co-guardian's name:**
+      ${ users[1].name_full() }
+    show if: add_co_guardian
+  - Edit: users[1].birthdate
+    button: |
+      **When was ${ users[1].name_full() } born?**
+      ${ users[1].birthdate }
+    show if: add_co_guardian
+  - Edit: users[1].is_willing
+    button: |
+      **Is ${ users[1].name_full() } willing and able to act as guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_willing))}
+    show if: add_co_guardian
+  - Edit: users[1].address.address
+    button: |
+      **${ users[1].name_full() }'s' address:**[NEWLINE]
+      ${ users[1].address.on_one_line(bare=True) }
+    show if: add_co_guardian
+  - Edit: users[1].job
+    button: |
+      **What is ${ users[1].name_full() }'s current job?**
+      ${users[1].job}
+    show if: add_co_guardian
+  - Edit: users[1].is_disabled
+    button: |
+      **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
+      ${ word(yesno(users[1].is_disabled))}
+    show if: add_co_guardian
+  - Edit: users[1].found_negligent
+    button: |
+      **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
+      ${ word(yesno(users[1].found_negligent))}
+    show if: add_co_guardian
+  - Edit: users[1].has_felony_conviction
+    button: |
+      **Does ${ users[1].name_full() } have any felony convictions?**
+      ${ word(yesno(users[1].has_felony_conviction)) }
+    show if: add_co_guardian
+  - Edit: users[1].felony_convictions.revisit
+    button: |
+      **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
+
+      % for conviction in users[1].felony_convictions:
+      * Date: ${conviction.date}, Charge: ${ conviction.name.text }
+      % endfor
+    show if: add_co_guardian and users[1].has_felony_conviction
+  - Edit: oath_person_agree
+    button: |
+      **Do all proposed guardians agree to the terms of guardianship of the person?**
+      ${ word(yesno(oath_person_agree)) }    
+  - Edit: oath_estate_agree
+    button: |
+      **Do all proposed guardians agree to the terms of guardianship of the estate?**
+      ${ word(yesno(oath_estate_agree)) }
+
