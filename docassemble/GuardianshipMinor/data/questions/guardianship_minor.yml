@@ -15,7 +15,7 @@ objects:
   - users[i].felony_convictions: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)
   - child: ALIndividual
   - child.jail_delivery_address: ALAddress
-  - parents: ALPeopleList
+  - parents: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
   - parents[i].jail_delivery_address: ALAddress
   - other_cases: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)  
   - caregivers: ALPeopleList.using(there_are_any=True, complete_attribute='complete')
@@ -43,7 +43,7 @@ sections:
   - section_family: Child's parents, caregivers, and relatives
   - section_guardian: Guardian
   - section_filing: Filing, notice, and delivery
-  - section_download: Download  
+  - section_download: Download
 ---
 # interview order block
 mandatory: True
@@ -66,6 +66,8 @@ code: |
     child_too_old
   if child.address.state != 'IL':
     child_outside_illinois
+    child.address.unknown = False
+  
   previous_standby
   current_stg
   named_in_will
@@ -75,18 +77,38 @@ code: |
 
   set_progress(50)
   nav.set_section('section_family')
+  notice_intro
   if has_legal_parent:
-    parents[0].name.first
-    parents[0].agrees
-    if has_another_parent:
-      parents[1].name.first
-      parents[1].agrees
+    parents.gather()
+  
+  # if has_legal_parent:
+  #   parents[0].name.first
+  #   if not parents[0].agrees:
+  #     parents[0].notice_relationship = "parent"
+  #   if parents[0].knows_delivery_method:
+  #     parents[0].hand_delivery
+  #     parents[0].delivery_date
+  # 
+  #   if has_another_parent:
+  #     parents[1].name.first
+  #     if not parents[1].agrees:
+  #       parents[1].notice_relationship = "parent"
+  #     if parents[1].knows_delivery_method:
+  #       parents[1].hand_delivery
+  #       parents[1].delivery_date
+  
   if other_case_involving_parents:
     other_cases.gather()
   caregivers.gather()
   if minor_is_married:
     spouse.name.first
+    spouse.relationship = "Spouse"
     spouse.address.unknown
+    if not spouse.agrees:
+      spouse.notice_relationship
+    if spouse.knows_delivery_method:
+      spouse.hand_delivery
+      spouse.delivery_date
   else:
     if adult_relatives.there_are_any:
       adult_relatives.gather()
@@ -135,17 +157,26 @@ code: |
   set_progress(90)
   nav.set_section('section_filing')  
   notice_intro
-  
-  for party in get_notice_parties():
-    party.notice_relationship
-    if not party.agrees:
-      if party.address.unknown:
-        party.notice_by_publication
-      else:
-        if party.knows_delivery_method:
-          party.hand_delivery
-          party.delivery_date
 
+  if child.age_in_years() >= 14:
+    if child.agrees:
+      child_nomination_info
+    else:
+      child.notice_relationship = "minor"
+    if child.knows_delivery_method:
+      child.hand_delivery
+      child.delivery_date
+  
+  #  for party in get_notice_parties():
+  #    party.notice_relationship
+  #    if not party.agrees:
+  #      if party.address.unknown:
+  #        party.notice_by_publication
+  #      else:
+  #        if party.knows_delivery_method:
+  #          party.hand_delivery
+  #          party.delivery_date
+  
   hand_delivery_info
 
   filing_county 
@@ -488,6 +519,21 @@ fields:
   - Does ${child.name_full()} have at least one legal parent?": has_legal_parent
     datatype: yesnoradio
 ---
+code: |
+  parents[i].name.first
+  parents[i].relationship = "parent"
+  if not parents[i].agrees:
+    parents[i].notice_relationship = "parent"
+  if parents[i].not_found or parents[i].is_dead:
+    parents[i].address.unknown == True
+  else:
+    parents[i].address.unknown
+    parents[i].knows_delivery_method
+    if parents[i].knows_delivery_method:
+      parents[i].hand_delivery
+      parents[i].delivery_date
+  parents[i].complete = True
+---
 id: names of parents
 sets:
   - parents[i].name.first
@@ -555,7 +601,7 @@ subquestion: |
   
   **Note:** You do not need to include parents who have had their parental rights terminated by a court.
 fields:
-  - Does ${child.name_full()} have another legal parent?": has_another_parent
+  - Does ${child.name_full()} have another legal parent?": parents.there_is_another
     datatype: yesnoradio
 ---
 template: parental_notice_help
@@ -570,6 +616,10 @@ content: |
   * Gave up physical custody of ${child.name_full()},
   * Cannot be located, or
   * Is unable or unwilling to take care of ${child.name_full()}.
+---
+code: |
+  if parents.number_gathered() >= 2:
+    parents.there_is_another = False
 ---
 id: another court case that involves parents
 question: |
@@ -674,6 +724,13 @@ code: |
   caregivers[i].name.first
   caregivers[i].relationship
   caregivers[i].address.unknown = False
+  caregivers[i].agrees
+  if not caregivers[i].agrees:
+    caregivers[i].notice_relationship
+  caregivers[i].knows_delivery_method
+  if caregivers[i].knows_delivery_method:
+    caregivers[i].hand_delivery
+    caregivers[i].delivery_date
   caregivers[i].complete = True
 ---
 id: caregiver name
@@ -768,11 +825,15 @@ fields:
     datatype: yesno
     disable others: True
 ---
+code: |
+  if spouse.number_gathered() == 1:
+    spouse.there_is_another = False
+---
 id: any adult_relatives
 question: |  
-  Does ${child.name_full()} have any adult relatives?
+  ${child.name_full()}'s adult relatives
 subquestion: | 
-  So far you have told us about: 
+  So far you have told us about these adult caregivers: 
 
   % for person in caregivers:
   * ${person.name_full()}, ${person.relationship}
@@ -793,6 +854,13 @@ code: |
   adult_relatives[i].name.first
   adult_relatives[i].relationship
   adult_relatives[i].address.unknown
+  adult_relatives[i].agrees
+  if not adult_relatives[i].agrees:
+    adult_relatives[i].notice_relationship
+  adult_relatives[i].knows_delivery_method
+  if adult_relatives[i].knows_delivery_method:
+    adult_relatives[i].hand_delivery
+    adult_relatives[i].delivery_date
   adult_relatives[i].complete = True
 ---
 sets: 
@@ -1439,11 +1507,12 @@ generic object: ALPeopleList
 question: |
   Does ${x[i].name_full()} agree to the guardianship of ${ child.name_full()}?
 subquestion: |
-  % if valid_co_guardian():
-  If you know that ${x[i].name_full()} agrees that you and ${ users[1].name_full() } should be the guardian and co-guardian of ${ child.name_full()}, they can sign a CONSENT and APPEARANCE.
-  % else:
-  If you know that ${x[i].name_full()} agrees that you should be the guardian of ${ child.name_full()}, they can sign a CONSENT and APPEARANCE.
-  % endif
+  UPDATE to handle asking about agree BEFORE guardians are named - or change order child, guardian, others?
+  #  % if valid_co_guardian():
+  #  If you know that ${x[i].name_full()} agrees that you and ${ users[1].name_full() } should be the guardian and co-guardian of ${ child.name_full()}, they can sign a CONSENT and APPEARANCE.
+  #  % else:
+  #  If you know that ${x[i].name_full()} agrees that you should be the guardian of ${ child.name_full()}, they can sign a CONSENT and APPEARANCE.
+  #  % endif
  
   UPDATE: The Consent & Appearance must be signed in front of a notary public, filed
 
@@ -1473,14 +1542,23 @@ fields:
     datatype: yesno
     disable others: True
 ---
+id: child nomination info
+continue button field: child_nomination_info
+question: |
+  ${ child.name_full() } can nominate guardians
+subquestion: |
+  EXPLAIN since child is >= 14, they can nominate guardian. This is not required.
+
+  You can download the form at the end of this program.
+---
 id: knows delivery method
 generic object: ALIndividual
 question: |
-  Do you know **how** and **when** you will send your forms to ${ x }?
+  Do you know **how** and **when** you will send your forms to ${ x.name_full() }?
 subquestion: |
   ${ collapse_template(delivery_method_help) }  
 
-  You must send the *Petition for Guardianship of a Minor* and the *Notice of Hearing* at least 7 days before the court date. You must use the options below to send documents. You cannot use email. 
+  You must deliver the *Petition for Guardianship of a Minor* and the *Notice of Hearing* at least 7 days before the court date. You must use the options below to deliver documents. You cannot use email. 
 
   If you do not know this now, you can add it to the Proof of Delivery section of your forms later.
 fields:
@@ -1922,61 +2000,14 @@ review:
     button: |
       **Does ${child.name_full()} have at least one legal parent?**
       ${ word(yesno(has_legal_parent)) }
-  - Edit: parents[0].name.first
+  - Edit: parents.revisit
     button: |
-      **Parent's name:**
-      ${ parents[0].name_full()  }
-    show if: has_legal_parent
-  - Edit: parents[0].agrees
-    button: |
-      **Information about ${ parents[0].name_full() }:**
+      **${child.name_full()}'s parents: (Edit to change name, relationship, and notice or consent)**
+
+      % for person in parents:
+      * ${ person.name_full() }
+      % endfor
       
-      % if parents[0].agrees:
-      * ${parents[0].name_full()} agrees to the guardianship.
-      % endif
-      % if parents[0].is_dead:
-      * ${parents[0].name_full()} died on ${ parents[0].decease_date }.
-      % endif
-      % if parents[0].gave_up_custody:
-      * ${parents[0].name_full()} voluntarily gave up custody of ${child.name_full()}.
-      % endif
-      % if parents[0].not_found:
-      * ${parents[0].name_full()} cannot be found. Last contact was on ${parents[0].last_contact_date} at ${parents[0].last_contact_location}.
-      % endif
-      % if parents[0].unable:
-      * ${parents[0].name_full()} is unable or unwilling to take care of ${child.name_full()}.
-      % endif
-    show if: has_legal_parent
-  - Edit: has_another_parent
-    button: |
-      **Does ${child.name_full()} have another legal parent?**
-      ${ word(yesno(has_legal_parent)) }
-    show if: has_legal_parent
-  - Edit: parents[1].name.first
-    button: |
-      **Second parent's name:**
-      ${ parents[1].name_full()  }
-    show if: has_legal_parent and has_another_parent
-  - Edit: parents[1].agrees
-    button: |
-      **Information about ${ parents[1].name_full() }:**
-      
-      % if parents[1].agrees:
-      * ${parents[1].name_full()} agrees to the guardianship.
-      % endif
-      % if parents[1].is_dead:
-      * ${parents[1].name_full()} died on ${ parents[1].decease_date }.
-      % endif
-      % if parents[1].gave_up_custody:
-      * ${parents[1].name_full()} voluntarily gave up custody of ${child.name_full()}.
-      % endif
-      % if parents[1].not_found:
-      * ${parents[1].name_full()} cannot be found. Last contact was on ${parents[1].last_contact_date} at ${parents[1].last_contact_location}.
-      % endif
-      % if parents[1].unable:
-      * ${parents[1].name_full()} is unable or unwilling to take care of ${child.name_full()}.
-      % endif
-    show if: has_legal_parent and has_another_parent
   - Edit: other_case_involving_parents
     button: |
       **Do you know of any court cases that involve ${child.name_full()} or their parents?**
@@ -2000,7 +2031,7 @@ review:
 
   - Edit: caregivers.revisit
     button: |
-      **Adult caregivers that live with ${child.name_full()}: (Edit to change details)**
+      **Adult caregivers that live with ${child.name_full()}: (Edit to change name, relationship, and notice or consent)**
 
       % for person in caregivers:
       * ${ person.name_full() }, ${ person.relationship }
@@ -2023,6 +2054,64 @@ review:
       ${ spouse.address.on_one_line(bare=True) }
       % endif
     show if: minor_is_married
+  - Edit: spouse.notice_relationship
+    button: |
+      **For notice purposes, ${spouse.name_full()} is:**
+
+      % if spouse.notice_relationship == "parent":
+      ${ child.name_full()}'s parent
+      % elif spouse.notice_relationship == "sibling": 
+      ${ child.name_full()}'s sibling who is at least 18 years old
+      % elif spouse.notice_relationship == "minor": 
+      The child, who is at least 14 years old
+      % elif spouse.notice_relationship == "custody":    
+      Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}
+      % else:
+      Other: ${ spouse.other_notice_relationship }
+      % endif      
+    show if: minor_is_married
+  - Edit: spouse.agrees
+    button: |
+      **Does ${spouse.name_full()} agree to the guardianship of ${ child.name_full()}?**
+      ${word(yesno(spouse.agrees))}
+    show if: minor_is_married
+  - Edit: spouse.knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${spouse.name_full()}?**
+      ${ word(yesno(spouse.knows_delivery_method)) }
+    show if: minor_is_married and spouse.agrees == False
+
+  - Edit: spouse.hand_delivery
+    button: |
+      **Delivery by: (Edit to view and change details)**
+      
+      % if spouse.hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if spouse.mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if spouse.jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if spouse.hand_delivery != True and spouse.mail_delivery != True and spouse.jail_delivery != True:
+        * None entered
+      % endif
+    show if: minor_is_married and spouse.agrees == False and spouse.knows_delivery_method
+  - Edit: spouse.delivery_date
+    button: |
+      **Delivery on:**
+      % if spouse.knows_delivery_date == True and spouse.knows_delivery_time == True:
+      ${ spouse.delivery_date } at ${ format_time(spouse.delivery_time, "h:mm a") }
+      % elif spouse.knows_delivery_date: 
+      ${ spouse.delivery_date }, time not entered.
+      % elif spouse.knows_delivery_time:
+      Date not entered, ${ format_time(spouse.delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: minor_is_married and spouse.agrees == False and spouse.knows_delivery_method
+
   - Edit: adult_relatives.there_are_any
     button: |
       **Does ${child.name_full()} have any adult relatives?**
@@ -2030,7 +2119,7 @@ review:
     show if: not minor_is_married
   - Edit: adult_relatives.revisit
     button: |
-      **${child.name_full()}'s adult relatives: (Edit to change name, relationship, and address)**
+      **${child.name_full()}'s adult relatives: (Edit to change name, relationship, notice or consent, and address)**
 
       % for person in adult_relatives:
       * ${ person.name_full() }, ${ person.relationship }
@@ -2166,11 +2255,8 @@ review:
   
   - note: |
       <h4>Filing, notice, and delivery</h4>
-  - Edit: parents.revisit
-    button: |
-      **Edit how ${ child.name_full() }'s parents will be notified**
-    show if: has_legal_parent
-
+  - note: |
+      To edit how parents, caregivers, and adult relatives will be notified, click here. UPDATE
   - Edit: filing_county
     button: |
       **County where you will file the petition:**
@@ -2293,7 +2379,7 @@ edit:
 delete buttons: True
 confirm: True
 ---
-id: caregiver details
+id: caregiver details review screen
 continue button field: x.review_caregiver_details
 section: Child's parents, caregivers, and relatives
 generic object: ALIndividual
@@ -2308,6 +2394,218 @@ review:
     button: |
       **Relationship to ${child.name_full()}:**
       ${ x.relationship }
+  - Edit: x.notice_relationship
+    button: |
+      **For notice purposes, ${x.name_full()} is:**
+
+      % if x.notice_relationship == "parent":
+      ${ child.name_full()}'s parent
+      % elif x.notice_relationship == "sibling": 
+      ${ child.name_full()}'s sibling who is at least 18 years old
+      % elif x.notice_relationship == "minor": 
+      The child, who is at least 14 years old
+      % elif x.notice_relationship == "custody":    
+      Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}
+      % else:
+      Other: ${ x.other_notice_relationship }
+      % endif
+  - Edit: x.agrees
+    button: |
+      **Does ${x.name_full()} agree to the guardianship of ${ child.name_full()}?**
+      ${word(yesno(x.agrees))}
+  - Edit: x.knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${x.name_full()}?**
+      ${ word(yesno(x.knows_delivery_method)) }
+    show if: x.agrees == False
+  - Edit: x.hand_delivery
+    button: |
+      **Delivery by: (Edit to view and change details)**
+      
+      % if x.hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if x.mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if x.jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if x.hand_delivery != True and x.mail_delivery != True and x.jail_delivery != True:
+        * None entered
+      % endif
+    show if: x.agrees == False and x.knows_delivery_method
+  - Edit: x.delivery_date
+    button: |
+      **Delivery on:**
+      % if x.knows_delivery_date == True and x.knows_delivery_time == True:
+      ${ x.delivery_date } at ${ format_time(x.delivery_time, "h:mm a") }
+      % elif x.knows_delivery_date: 
+      ${ x.delivery_date }, time not entered.
+      % elif x.knows_delivery_time:
+      Date not entered, ${ format_time(x.delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: x.agrees == False and x.knows_delivery_method
+---
+
+---
+id: parents revisit review screen
+continue button field: parents.revisit
+section: Child's parents, caregivers, and relatives
+question: |
+  Edit ${child.name_full()}'s parents 
+subquestion: |  
+  ${ parents.table }
+
+  % if parents.number_gathered() == 1:
+  ${ parents.add_action() }
+  % endif
+---
+table: parents.table
+rows: parents
+columns:
+  - Name: |
+      row_item.name_full() if defined("row_item.name.first") else ""
+edit:
+  - review_parent_details
+delete buttons: True
+confirm: True
+---
+id: parent details review screen
+continue button field: x.review_parent_details
+section: Child's parents, caregivers, and relatives
+generic object: ALIndividual
+question: |
+  Edit ${ x.name_full() }'s information
+review: 
+  - Edit: x.name.first
+    button: |
+      **Name:**
+      ${ x.name_full()  }
+  - Edit: x.notice_relationship
+    button: |
+      **For notice purposes, ${x.name_full()} is:**
+
+      % if x.notice_relationship == "parent":
+      ${ child.name_full()}'s parent
+      % elif x.notice_relationship == "sibling": 
+      ${ child.name_full()}'s sibling who is at least 18 years old
+      % elif x.notice_relationship == "minor": 
+      The child, who is at least 14 years old
+      % elif x.notice_relationship == "custody":    
+      Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}
+      % else:
+      Other: ${ x.other_notice_relationship }
+      % endif      
+  - Edit: x.address.unknown
+    button: |
+      **Current address:**
+      % if x.address.unknown:
+      Unknown
+      % else:
+      ${ x.address.on_one_line(bare=True) }
+      % endif
+  - Edit: x.agrees
+    button: |
+      **Does ${x.name_full()} agree to the guardianship of ${ child.name_full()}?**
+      ${word(yesno(x.agrees))}
+  - Edit: x.knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${x.name_full()}?**
+      ${ word(yesno(x.knows_delivery_method)) }
+    show if: x.agrees == False
+  - Edit: x.hand_delivery
+    button: |
+      **Delivery by: (Edit to view and change details)**
+      
+      % if x.hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if x.mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if x.jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if x.hand_delivery != True and x.mail_delivery != True and x.jail_delivery != True:
+        * None entered
+      % endif
+    show if: x.agrees == False and x.knows_delivery_method
+  - Edit: x.delivery_date
+    button: |
+      **Delivery on:**
+      % if x.knows_delivery_date == True and x.knows_delivery_time == True:
+      ${ x.delivery_date } at ${ format_time(x.delivery_time, "h:mm a") }
+      % elif x.knows_delivery_date: 
+      ${ x.delivery_date }, time not entered.
+      % elif x.knows_delivery_time:
+      Date not entered, ${ format_time(x.delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: x.agrees == False and x.knows_delivery_method
+
+  - note: |
+      EDIT THE FOLLOWING
+
+  - Edit: parents[0].name.first
+    button: |
+      **Parent's name:**
+      ${ parents[0].name_full()  }
+    show if: has_legal_parent
+  - Edit: parents[0].agrees
+    button: |
+      **Information about ${ parents[0].name_full() }:**
+      
+      % if parents[0].agrees:
+      * ${parents[0].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[0].is_dead:
+      * ${parents[0].name_full()} died on ${ parents[0].decease_date }.
+      % endif
+      % if parents[0].gave_up_custody:
+      * ${parents[0].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[0].not_found:
+      * ${parents[0].name_full()} cannot be found. Last contact was on ${parents[0].last_contact_date} at ${parents[0].last_contact_location}.
+      % endif
+      % if parents[0].unable:
+      * ${parents[0].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent
+  - Edit: parents[1].name.first
+    button: |
+      **Second parent's name:**
+      ${ parents[1].name_full()  }
+    show if: has_legal_parent and has_another_parent
+  - Edit: parents[1].agrees
+    button: |
+      **Information about ${ parents[1].name_full() }:**
+      
+      % if parents[1].agrees:
+      * ${parents[1].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[1].is_dead:
+      * ${parents[1].name_full()} died on ${ parents[1].decease_date }.
+      % endif
+      % if parents[1].gave_up_custody:
+      * ${parents[1].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[1].not_found:
+      * ${parents[1].name_full()} cannot be found. Last contact was on ${parents[1].last_contact_date} at ${parents[1].last_contact_location}.
+      % endif
+      % if parents[1].unable:
+      * ${parents[1].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent and has_another_parent
+
+
+
+
+
+
 ---
 id: adult relatives revisit review screen
 continue button field: adult_relatives.revisit
@@ -2333,7 +2631,7 @@ edit:
 delete buttons: True
 confirm: True
 ---
-id: adult relative details
+id: adult relative details review screen
 continue button field: x.review_adult_relative_details
 section: Child's parents, caregivers, and relatives
 generic object: ALIndividual
@@ -2348,6 +2646,21 @@ review:
     button: |
       **Relationship to ${child.name_full()}:**
       ${ x.relationship }
+  - Edit: x.notice_relationship
+    button: |
+      **For notice purposes, ${x.name_full()} is:**
+
+      % if x.notice_relationship == "parent":
+      ${ child.name_full()}'s parent
+      % elif x.notice_relationship == "sibling": 
+      ${ child.name_full()}'s sibling who is at least 18 years old
+      % elif x.notice_relationship == "minor": 
+      The child, who is at least 14 years old
+      % elif x.notice_relationship == "custody":    
+      Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}
+      % else:
+      Other: ${ x.other_notice_relationship }
+      % endif      
   - Edit: x.address.unknown
     button: |
       **Current address:**
@@ -2356,6 +2669,46 @@ review:
       % else:
       ${ x.address.on_one_line(bare=True) }
       % endif
+  - Edit: x.agrees
+    button: |
+      **Does ${x.name_full()} agree to the guardianship of ${ child.name_full()}?**
+      ${word(yesno(x.agrees))}
+  - Edit: x.knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${x.name_full()}?**
+      ${ word(yesno(x.knows_delivery_method)) }
+    show if: x.agrees == False
+  - Edit: x.hand_delivery
+    button: |
+      **Delivery by: (Edit to view and change details)**
+      
+      % if x.hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if x.mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if x.jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if x.hand_delivery != True and x.mail_delivery != True and x.jail_delivery != True:
+        * None entered
+      % endif
+    show if: x.agrees == False and x.knows_delivery_method
+  - Edit: x.delivery_date
+    button: |
+      **Delivery on:**
+      % if x.knows_delivery_date == True and x.knows_delivery_time == True:
+      ${ x.delivery_date } at ${ format_time(x.delivery_time, "h:mm a") }
+      % elif x.knows_delivery_date: 
+      ${ x.delivery_date }, time not entered.
+      % elif x.knows_delivery_time:
+      Date not entered, ${ format_time(x.delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: x.agrees == False and x.knows_delivery_method
+
 ---
 id: convictions revisit review screen
 continue button field: users[i].felony_convictions.revisit
@@ -2384,28 +2737,6 @@ edit:
   - date
 delete buttons: True
 confirm: True
----
-id: parents revisit review screen
-continue button field: parents.revisit
-section: Child's parents, caregivers, and relatives
-question: |
-  Edit how ${child.name_full()}'s parents will be notified
-subquestion: |
-  UPDATE
-  
-  ${ adult_relatives.table }
-
-
-
-
-
-
-
-
-
-
-
-
 ---
 id: child review screen
 section: Child
