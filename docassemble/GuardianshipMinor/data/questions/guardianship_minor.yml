@@ -24,6 +24,7 @@ objects:
   - spouse.jail_delivery_address: ALAddress
   - adult_relatives: ALPeopleList.using(complete_attribute='complete')
   - adult_relatives[i].jail_delivery_address: ALAddress
+  - relatives: ALPeopleList.using(there_are_any=True)	
   - notice_parties: ALPeopleList.using(there_are_any=True)
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
@@ -83,7 +84,8 @@ code: |
     
   if other_case_involving_parents:
     other_cases.gather()
-  caregivers.gather()
+  if caregivers.there_are_any:
+    caregivers.gather()
   if minor_is_married:
     spouse.name.first
     spouse.relationship = "Spouse"
@@ -144,7 +146,8 @@ code: |
   set_progress(90)
   nav.set_section('section_filing')  
   filing_intro
-
+  build_relatives_list
+  
   if child.age_in_years() >= 14:
     if not child.agrees:
       if child.address.unknown:
@@ -963,13 +966,34 @@ code: |
     if minor_is_married:
       temp_list.append(spouse)
     else:
-      for caregiver in caregivers:
-        temp_list.append(caregiver)    	  
+      if caregivers.there_are_any:
+        for caregiver in caregivers:
+          temp_list.append(caregiver)    	  
       if adult_relatives.there_are_any:
         for x in range(adult_relatives.number() - 1):
           temp_list.append(adult_relatives[x])
     
     return temp_list
+---
+reconsider: True
+code: |
+  temp_list = []
+  if child.age_in_years() >= 14:
+    child.relationship = "minor age 14+"
+    temp_list.append(child)
+
+  if minor_is_married:
+    temp_list.append(spouse)
+  else:
+    if caregivers.there_are_any:
+      for caregiver in caregivers:
+        temp_list.append(caregiver)    	  
+    if adult_relatives.there_are_any:
+      for x in range(adult_relatives.number() - 1):
+        temp_list.append(adult_relatives[x])
+  relatives = ALPeopleList("relatives", elements = temp_list )
+  
+  build_relatives_list = True
 ---
 id: next steps
 question: |
@@ -1538,7 +1562,7 @@ question: |
 subquestion: |
   Since ${child.name_full()} is at least 14 years old, they can participate in the court case.
   
-  If ${child.name_full()} agrees to the guardianship, they can fill out Nomination. You can download the optional Nomination form at the end of this program.
+  If ${child.name_full()} agrees to the guardianship, they can fill out Nomination. You can download the Nomination form at the end of this program.
   
   If they do not agree, or if you do not know, you will have to send them notice of the guardianship. 
   
@@ -1923,14 +1947,16 @@ content: |
 ---
 objects:
   - instructions: ALDocument.using(title="Instructions", filename="instructions.pdf", has_addendum=False)
+  - petition: ALDocument.using(title="Petition", filename="petition_for_guardianship.pdf", has_addendum=False)
 ---
 code: |
   instructions.enabled = True
+  petition.enabled = True
 
 ---
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions], filename="minor_guardianship.pdf", title="All forms")
-  - al_court_bundle: ALDocumentBundle.using(elements=[]], filename="minor_guardianship.pdf", title="Motion")
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition], filename="minor_guardianship.pdf", title="All forms")
+  - al_court_bundle: ALDocumentBundle.using(elements=[]], filename="minor_guardianship.pdf", title="Minor guardinahsip forms")
 
 ---
 attachment:
@@ -1942,8 +1968,151 @@ attachment:
   pdf template file: instructions.pdf
   fields:
       - "fake": ${ "" }
-  
+---
+attachment:
+  variable name: petition[i]
+  name: petition
+  filename: petition
+  skip undefined: True
+  editable: False
+  pdf template file: petition_for_guardianship.pdf
+  fields:
+      - "county": ${ filing_county }
+      - "case_number": ${ "" }
+      - "case_number_2": ${ "" }
+      - "case_number_3": ${ "" }
+      - "case_number_4": ${ "" }
+      - "case_number_5": ${ "" }
+      - "case_number_6": ${ "" }
+      - "case_number_7": ${ "" }
+      - "child_name": ${ child.name_full() }
+      - "guardianship_type_person": ${ True if guardianship_type == "person" else "" }
+      - "guardianship_type_estate": ${ True if guardianship_type == "estate" else "" }
+      - "guardianship_type_both": ${ True if guardianship_type == "both" else "" }
+      - "child_name_2": ${ child.name_full() }
+      - "child_dob": ${ child.birthdate }
+      - "child_address": ${ child.address.on_one_line(bare=True) }
+      - "caregiver_name_0": ${ caregivers[0].name_full() if caregivers.there_are_any else "" }
+      - "caregiver_address_0": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any else "" }
+      - "caregiver_relationship_0": ${ caregivers[0].relationship if caregivers.there_are_any else "" }
+      - "caregiver_name_1": ${ caregivers[1].name_full() if caregivers.there_are_any and caregivers.number() > 1 else "" }
+      - "caregiver_address_1": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 1 else "" }
+      - "caregiver_relationship_1": ${ caregivers[1].relationship if caregivers.there_are_any and caregivers.number() > 1 else "" }
+      - "caregiver_name_2": ${ caregivers[2].name_full() if caregivers.there_are_any and caregivers.number() > 2 else "" }
+      - "caregiver_address_2": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 2 else "" }
+      - "caregiver_relationship_2": ${ caregivers[2].relationship if caregivers.there_are_any and caregivers.number() > 2 else "" }
+      - "caregiver_name_3": ${ caregivers[3].name_full() if caregivers.there_are_any and caregivers.number() > 3 else "" }
+      - "caregiver_address_3": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 3 else "" }
+      - "caregiver_relationship_3": ${ caregivers[3].relationship if caregivers.there_are_any and caregivers.number() > 3 else "" }
+      - "relative_name_0": ${ relatives[0].name_full() if relatives.number > 0 else "" }
+      - "relative_address_0": ${ relatives[0].address.on_one_line(bare=True) if relatives.number > 0 else "" }
+      - "relative_relationship_0": ${ relatives[0].relationship if relatives.number > 0 else "" }
+      - "relative_name_1": ${ relatives[1].name_full() if relatives.number > 1 else "" }
+      - "relative_address_1": ${ relatives[1].address.on_one_line(bare=True) if relatives.number > 1 else "" }
+      - "relative_relationship_1": ${ relatives[1].relationship if relatives.number > 1 else "" }
+      - "relative_name_2": ${ relatives[2].name_full() if relatives.number > 2 else "" }
+      - "relative_address_2": ${ relatives[2].address.on_one_line(bare=True) if relatives.number > 2 else "" }
+      - "relative_relationship_2": ${ relatives[2].relationship if relatives.number > 2 else "" }
+      - "relative_name_3": ${ relatives[3].name_full() if relatives.number > 3 else "" }
+      - "relative_address_3": ${ relatives[3].address.on_one_line(bare=True) if relatives.number > 3 else "" }
+      - "relative_relationship_3": ${ relatives[3].relationship if relatives.number > 3 else "" }
+      - "more_relatives_no": ${ True if relatives.number <= 4 else "" }
+      - "more_relatives_yes": ${ True if relatives.number > 4 else "" }
+      - "other_case_number_0": ${ "" }
+      - "other_case_state_0": ${ "" }
+      - "other_case_il_county_0": ${ "" }
+      - "other_case_number_1": ${ "" }
+      - "other_case_state_1": ${ "" }
+      - "other_case_il_county_1": ${ "" }
+      - "more_cases_no": ${ "" }
+      - "more_cases_yes": ${ "" }
+      - "estate_unknown": ${ "" }
+      - "estate_0": ${ "" }
+      - "estate_other": ${ "" }
+      - "estate_amount": ${ "" }
+      - "income_unknown": ${ "" }
+      - "income_0": ${ "" }
+      - "income_other": ${ "" }
+      - "income_amount": ${ "" }
 
+      - "parent_name_0": ${ "" }
+      - "parent_agrees_0": ${ "" }
+      - "parent_is_dead_0": ${ "" }
+      - "parent_death_date_0": ${ "" }
+      - "parent_gave_up_0": ${ "" }
+      - "parent_not_found_0": ${ "" }
+      - "parent_last_contact_date_0": ${ "" }
+      - "parent_last_contact_location_0": ${ "" }
+      - "parent_unable_0": ${ "" }
+
+      - "one_parent_cb": ${ "" }
+      - "two_parents_cb": ${ "" }
+      - "parent_name_1": ${ "" }
+      - "parent_agrees_1": ${ "" }
+      - "parent_is_dead_1": ${ "" }
+      - "parent_death_date_1": ${ "" }
+      - "parent_gave_up_1": ${ "" }
+      - "parent_not_found_1": ${ "" }
+      - "parent_last_contact_date_1": ${ "" }
+      - "parent_last_contact_location_1": ${ "" }
+      - "parent_unable_1": ${ "" }
+
+      - "child_agrees_no": ${ "" }
+      - "child_agrees_yes": ${ "" }
+      - "child_standby_no": ${ "" }
+      - "child_standby_yes": ${ "" }
+      - "child_stg_no": ${ "" }
+      - "child_stg_yes": ${ "" }
+      - "child_will_no": ${ "" }
+      - "child_will_yes": ${ "" }
+      - "child_admin_no": ${ "" }
+      - "child_admin_yes": ${ "" }
+
+      - "guardian_name": ${ "" }
+      - "guardian_address": ${ "" }
+      - "guardian_age": ${ "" }
+      - "guardian_job": ${ "" }
+      - "guardian_disabled_yes": ${ "" }
+      - "guardian_disabled_no": ${ "" }
+      - "guardian_no_felonies": ${ "" }
+      - "guardian_yes_felonies": ${ "" }
+      - "guardian_felony_date_0": ${ "" }
+      - "guardian_felony_charge_0": ${ "" }
+      - "guardian_felony_date_1": ${ "" }
+      - "guardian_felony_charge_1": ${ "" }
+      - "guardian_felony_date_2": ${ "" }
+      - "guardian_felony_charge_2": ${ "" }
+      - "guardian_dcfs_yes": ${ "" }
+      - "guardian_dcfs_no": ${ "" }
+
+      - "co_guardian_no": ${ "" }
+      - "co_guardian_yes": ${ "" }
+      - "co_guardian_name": ${ "" }
+      - "co_guardian_address": ${ "" }
+      - "co_guardian_age": ${ "" }
+      - "co_guardian_job": ${ "" }
+      - "co_guardian_disabled_yes": ${ "" }
+      - "co_guardian_disabled_no": ${ "" }
+      - "co_guardian_no_felonies": ${ "" }
+      - "co_guardian_yes_felonies": ${ "" }
+      - "co_guardian_felony_date_0": ${ "" }
+      - "co_guardian_felony_charge_0": ${ "" }
+      - "co_guardian_felony_date_1": ${ "" }
+      - "co_guardian_felony_charge_1": ${ "" }
+      - "co_guardian_felony_date_2": ${ "" }
+      - "co_guardian_felony_charge_2": ${ "" }
+      - "co_guardian_dcfs_yes": ${ "" }
+      - "co_guardian_dcfs_no": ${ "" }
+
+      - "guardianship_type_person_2": ${ True if guardianship_type == "person" else "" }
+      - "guardianship_type_estate_2": ${ True if guardianship_type == "estate" else "" }
+      - "guardianship_type_both_2": ${ True if guardianship_type == "both" else "" }
+      - "e_sign_name": ${ "" }
+      - "user_name": ${ users[0].name_full() }
+      - "for_self": ${ "" }
+      - "user_phone": ${ "" }
+      - "user_email": ${ "" }
+      - "user_address": ${ "" }
 
 
 ---
