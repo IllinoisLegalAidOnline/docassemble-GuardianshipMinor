@@ -1439,7 +1439,7 @@ subquestion: |
 
   If ESTATE then BOND - see instructions
 
-  Download form & bring to court
+  Download form, IF CO-GUARDIAN E-SIGN Oath, & bring to court
 ---
 id: oath person check
 question: |
@@ -1948,16 +1948,35 @@ content: |
 objects:
   - instructions: ALDocument.using(title="Instructions", filename="instructions.pdf", has_addendum=False)
   - petition: ALDocument.using(title="Petition", filename="petition_for_guardianship.pdf", has_addendum=False)
+  - additional_relatives: ALDocument.using(title="Additional Relatives", filename="additional_relatives.pdf", has_addendum=False)
+  - additional_cases: ALDocument.using(title="Additional Cases", filename="additional_cases.pdf", has_addendum=False)
+  - oath: ALDocument.using(title="Oath of Guardian", filename="oath_of_guardian.pdf", has_addendum=False)
+  - oath_co_guardian: ALDocument.using(title="Oath of Co-Guardian", filename="oath_of_co_guardian.pdf", has_addendum=False)
 ---
 code: |
   instructions.enabled = True
   petition.enabled = True
+  additional_relatives.enabled = False
+  additional_cases.enabled = False
+  oath.enabled = False
+  oath_co_guardian.enabled = False
+  
+  if relatives.number() > 3:
+    additional_relatives.enabled = True
+  if other_case_involving_parents and other_cases.number() > 2:
+    additional_cases.enabled = True
 
+  if guardianship_type == "person":
+    oath.enabled = True
+    if add_co_guardian and valid_co_guardian():
+      oath_co_guardian.enabled = True  
+  
 ---
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition], filename="minor_guardianship.pdf", title="All forms")
-  - al_court_bundle: ALDocumentBundle.using(elements=[]], filename="minor_guardianship.pdf", title="Minor guardinahsip forms")
-
+  - petition_bundle: ALDocumentBundle.using(elements=[petition, additional_relatives, additional_cases], filename="petition_for_guardianship.pdf", title="Petition", enabled=True)
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition_bundle, oath, oath_co_guardian], filename="minor_guardianship_forms.pdf", title="All forms")
 ---
 attachment:
   variable name: instructions[i]
@@ -2004,20 +2023,20 @@ attachment:
       - "caregiver_name_3": ${ caregivers[3].name_full() if caregivers.there_are_any and caregivers.number() > 3 else "" }
       - "caregiver_address_3": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 3 else "" }
       - "caregiver_relationship_3": ${ caregivers[3].relationship if caregivers.there_are_any and caregivers.number() > 3 else "" }
-      - "relative_name_0": ${ relatives[0].name_full() if relatives.number > 0 else "" }
-      - "relative_address_0": ${ relatives[0].address.on_one_line(bare=True) if relatives.number > 0 else "" }
-      - "relative_relationship_0": ${ relatives[0].relationship if relatives.number > 0 else "" }
-      - "relative_name_1": ${ relatives[1].name_full() if relatives.number > 1 else "" }
-      - "relative_address_1": ${ relatives[1].address.on_one_line(bare=True) if relatives.number > 1 else "" }
-      - "relative_relationship_1": ${ relatives[1].relationship if relatives.number > 1 else "" }
-      - "relative_name_2": ${ relatives[2].name_full() if relatives.number > 2 else "" }
-      - "relative_address_2": ${ relatives[2].address.on_one_line(bare=True) if relatives.number > 2 else "" }
-      - "relative_relationship_2": ${ relatives[2].relationship if relatives.number > 2 else "" }
-      - "relative_name_3": ${ relatives[3].name_full() if relatives.number > 3 else "" }
-      - "relative_address_3": ${ relatives[3].address.on_one_line(bare=True) if relatives.number > 3 else "" }
-      - "relative_relationship_3": ${ relatives[3].relationship if relatives.number > 3 else "" }
-      - "more_relatives_no": ${ True if relatives.number <= 4 else "" }
-      - "more_relatives_yes": ${ True if relatives.number > 4 else "" }
+      - "relative_name_0": ${ relatives[0].name_full() if relatives.number() > 0 else "" }
+      - "relative_address_0": ${ relatives[0].address.on_one_line(bare=True) if relatives.number() > 0 else "" }
+      - "relative_relationship_0": ${ relatives[0].relationship if relatives.number() > 0 else "" }
+      - "relative_name_1": ${ relatives[1].name_full() if relatives.number() > 1 else "" }
+      - "relative_address_1": ${ relatives[1].address.on_one_line(bare=True) if relatives.number() > 1 else "" }
+      - "relative_relationship_1": ${ relatives[1].relationship if relatives.number() > 1 else "" }
+      - "relative_name_2": ${ relatives[2].name_full() if relatives.number() > 2 else "" }
+      - "relative_address_2": ${ relatives[2].address.on_one_line(bare=True) if relatives.number() > 2 else "" }
+      - "relative_relationship_2": ${ relatives[2].relationship if relatives.number() > 2 else "" }
+      - "relative_name_3": ${ relatives[3].name_full() if relatives.number() > 3 else "" }
+      - "relative_address_3": ${ relatives[3].address.on_one_line(bare=True) if relatives.number() > 3 else "" }
+      - "relative_relationship_3": ${ relatives[3].relationship if relatives.number() > 3 else "" }
+      - "more_relatives_no": ${ True if relatives.number()<= 4 else "" }
+      - "more_relatives_yes": ${ True if relatives.number() > 4 else "" }
       - "other_case_number_0": ${ other_cases[0].name.text if other_case_involving_parents and other_cases.number > 0 else "" }
       - "other_case_state_0": |
           % if other_case_involving_parents and other_cases.number > 0:
@@ -2146,6 +2165,216 @@ attachment:
       - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
       - "user_email": ${ users[0].email if users[0].has_email_address else "" }
       - "user_address": ${ users[0].address.on_one_line(bare=True) }
+---
+attachment:
+  variable name: additional_relatives[i]
+  name: additional_relatives
+  filename: additional_relatives
+  skip undefined: True
+  editable: False
+  pdf template file: additional_relatives.pdf
+  fields:
+    - "county": ${ filing_county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
+    - "relative_name_4": ${ relatives[4].name_full() }
+    - "relative_address_4": ${ relatives[4].address.on_one_line(bare=True) }
+    - "relative_relationship_4": ${ relatives[4].relationship }
+    - "relative_name_5": ${ relatives[5].name_full() if relatives.number() > 5 else "" }
+    - "relative_address_5": ${ relatives[5].address.on_one_line(bare=True) if relatives.number() > 5 else "" }
+    - "relative_relationship_5": ${ relatives[5].relationship if relatives.number() > 5 else "" }
+    - "relative_name_6": ${ relatives[6].name_full() if relatives.number() > 6 else "" }
+    - "relative_address_6": ${ relatives[6].address.on_one_line(bare=True) if relatives.number() > 6 else "" }
+    - "relative_relationship_6": ${ relatives[6].relationship if relatives.number() > 6 else "" }
+    - "relative_name_7": ${ relatives[7].name_full() if relatives.number() > 7 else "" }
+    - "relative_address_7": ${ relatives[7].address.on_one_line(bare=True) if relatives.number() > 7 else "" }
+    - "relative_relationship_7": ${ relatives[7].relationship if relatives.number() > 7 else "" }
+    - "relative_name_8": ${ relatives[8].name_full() if relatives.number() > 8 else "" }
+    - "relative_address_8": ${ relatives[8].address.on_one_line(bare=True) if relatives.number() > 8 else "" }
+    - "relative_relationship_8": ${ relatives[8].relationship if relatives.number() > 8 else "" }
+    - "relative_name_9": ${ relatives[9].name_full() if relatives.number() > 9 else "" }
+    - "relative_address_9": ${ relatives[9].address.on_one_line(bare=True) if relatives.number() > 9 else "" }
+    - "relative_relationship_9": ${ relatives[9].relationship if relatives.number() > 9 else "" }
+---
+attachment:
+  variable name: additional_cases[i]
+  name: additional_cases
+  filename: additional_cases
+  skip undefined: True
+  editable: False
+  pdf template file: additional_cases.pdf
+  fields:
+    - "county": ${ filing_county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
+    - "other_case_number_2": ${ other_cases[2].name.text if other_cases.number > 2 else "" }
+    - "other_case_state_2": |
+        % if other_cases.number > 2:
+        % if other_cases[2].in_us:
+        ${state_name(other_cases[2].state)}
+        % else:  
+        ${country_name(other_cases[2].non_us_country)}
+        % endif
+        % else:
+        ${ "" }    
+        % endif 
+    - "other_case_il_county_2": |
+        % if other_cases.number > 2:
+        % if other_cases[2].in_us and other_cases[2].state == "IL":
+        ${ other_cases[2].county } County
+        % else:  
+        ${ "" }
+        % endif 
+        % else:  
+        ${""}
+        % endif         
+    - "other_case_number_3": ${ other_cases[3].name.text if other_cases.number > 3 else "" }
+    - "other_case_state_3": |
+        % if other_cases.number > 3:
+        % if other_cases[3].in_us:
+        ${state_name(other_cases[3].state)}
+        % else:  
+        ${country_name(other_cases[3].non_us_country)}
+        % endif
+        % else:
+        ${ "" }    
+        % endif 
+    - "other_case_il_county_3": |
+        % if other_cases.number > 3:
+        % if other_cases[3].in_us and other_cases[3].state == "IL":
+        ${ other_cases[3].county } County
+        % else:  
+        ${ "" }
+        % endif 
+        % else:  
+        ${""}
+        % endif
+    - "other_case_number_4": ${ other_cases[4].name.text if other_cases.number > 4 else "" }
+    - "other_case_state_4": |
+        % if other_cases.number > 4:
+        % if other_cases[4].in_us:
+        ${state_name(other_cases[4].state)}
+        % else:  
+        ${country_name(other_cases[4].non_us_country)}
+        % endif
+        % else:
+        ${ "" }    
+        % endif 
+    - "other_case_il_county_4": |
+        % if other_cases.number > 4:
+        % if other_cases[4].in_us and other_cases[4].state == "IL":
+        ${ other_cases[4].county } County
+        % else:  
+        ${ "" }
+        % endif 
+        % else:  
+        ${""}
+        % endif
+    - "other_case_number_5": ${ other_cases[5].name.text if other_cases.number > 5 else "" }
+    - "other_case_state_5": |
+        % if other_cases.number > 5:
+        % if other_cases[5].in_us:
+        ${state_name(other_cases[5].state)}
+        % else:  
+        ${country_name(other_cases[5].non_us_country)}
+        % endif
+        % else:
+        ${ "" }    
+        % endif 
+    - "other_case_il_county_5": |
+        % if other_cases.number > 5:
+        % if other_cases[5].in_us and other_cases[5].state == "IL":
+        ${ other_cases[5].county } County
+        % else:  
+        ${ "" }
+        % endif 
+        % else:  
+        ${""}
+        % endif
+    - "other_case_number_6": ${ other_cases[6].name.text if other_cases.number > 6 else "" }
+    - "other_case_state_6": |
+        % if other_cases.number > 6:
+        % if other_cases[6].in_us:
+        ${state_name(other_cases[6].state)}
+        % else:  
+        ${country_name(other_cases[6].non_us_country)}
+        % endif
+        % else:
+        ${ "" }    
+        % endif 
+    - "other_case_il_county_6": |
+        % if other_cases.number > 6:
+        % if other_cases[6].in_us and other_cases[6].state == "IL":
+        ${ other_cases[6].county } County
+        % else:  
+        ${ "" }
+        % endif 
+        % else:  
+        ${""}
+        % endif
+    - "other_case_number_7": ${ other_cases[7].name.text if other_cases.number > 7 else "" }
+    - "other_case_state_7": |
+        % if other_cases.number > 7:
+        % if other_cases[7].in_us:
+        ${state_name(other_cases[7].state)}
+        % else:  
+        ${country_name(other_cases[7].non_us_country)}
+        % endif
+        % else:
+        ${ "" }    
+        % endif 
+    - "other_case_il_county_7": |
+        % if other_cases.number > 7:
+        % if other_cases[7].in_us and other_cases[7].state == "IL":
+        ${ other_cases[7].county } County
+        % else:  
+        ${ "" }
+        % endif 
+        % else:  
+        ${""}
+        % endif
+---
+attachment:
+  variable name: oath[i]
+  name: oath
+  filename: oath
+  skip undefined: True
+  editable: False
+  pdf template file: oath.pdf
+  fields:
+    - "county": ${ filing_county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
+    - "guardian_name": ${ users[0].name_full() }
+    - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
+    - "user_name": ${ users[0].name_full() }
+    - "for_self": ${ True }
+    - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
+    - "user_email": ${ users[0].email if users[0].has_email_address else "" }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
+---
+attachment:
+  variable name: oath_co_guardian[i]
+  name: oath_co_guardian
+  filename: oath_co_guardian
+  skip undefined: True
+  editable: False
+  pdf template file: oath.pdf
+  fields:
+    - "county": ${ filing_county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
+    - "guardian_name": ${ users[1].name_full() }
+    - "user_name": ${ users[1].name_full() }
+    - "for_self": ${ True }
+    - "user_phone": ${ phone_number_formatted(users[1].phone_number) }
+    - "user_email": ${ users[1].email if users[1].has_email_address else "" }
+    - "user_address": ${ users[1].address.on_one_line(bare=True) }
+
+
+
+
+
 
 
 ---
