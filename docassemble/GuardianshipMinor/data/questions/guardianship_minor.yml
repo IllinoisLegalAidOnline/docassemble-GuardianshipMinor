@@ -2018,101 +2018,134 @@ attachment:
       - "relative_relationship_3": ${ relatives[3].relationship if relatives.number > 3 else "" }
       - "more_relatives_no": ${ True if relatives.number <= 4 else "" }
       - "more_relatives_yes": ${ True if relatives.number > 4 else "" }
-      - "other_case_number_0": ${ "" }
-      - "other_case_state_0": ${ "" }
-      - "other_case_il_county_0": ${ "" }
-      - "other_case_number_1": ${ "" }
-      - "other_case_state_1": ${ "" }
-      - "other_case_il_county_1": ${ "" }
-      - "more_cases_no": ${ "" }
-      - "more_cases_yes": ${ "" }
-      - "estate_unknown": ${ "" }
-      - "estate_0": ${ "" }
-      - "estate_other": ${ "" }
-      - "estate_amount": ${ "" }
-      - "income_unknown": ${ "" }
-      - "income_0": ${ "" }
-      - "income_other": ${ "" }
-      - "income_amount": ${ "" }
+      - "other_case_number_0": ${ other_cases[0].name.text if other_case_involving_parents and other_cases.number > 0 else "" }
+      - "other_case_state_0": |
+          % if other_case_involving_parents and other_cases.number > 0:
+          % if other_cases[0].in_us:
+          ${state_name(other_cases[0].state)}
+          % else:  
+          ${country_name(other_cases[0].non_us_country)}
+          % endif
+          % else:
+          ${ "" }    
+          % endif 
+      - "other_case_il_county_0": |
+          % if other_case_involving_parents and other_cases.number > 0:
+          % if other_cases[0].in_us and other_cases[0].state == "IL":
+          ${ other_cases[0].county } County
+          % else:  
+          ${ "" }
+          % endif 
+          % else:  
+          ${""}
+          % endif         
+      - "other_case_number_1": ${ other_cases[1].name.text if other_case_involving_parents and other_cases.number > 1 else "" }
+      - "other_case_state_1": |
+          % if other_case_involving_parents and other_cases.number > 1:
+          % if other_cases[1].in_us:
+          ${state_name(other_cases[1].state)}
+          % else:  
+          ${country_name(other_cases[1].non_us_country)}
+          % endif
+          % else:
+          ${ "" }    
+          % endif 
+      - "other_case_il_county_1": |
+          % if other_case_involving_parents and other_cases.number > 1:
+          % if other_cases[1].in_us and other_cases[0].state == "IL":
+          ${ other_cases[1].county } County
+          % else:  
+          ${ "" }
+          % endif 
+          % else:  
+          ${""}
+          % endif         
+      - "more_cases_no": ${ True if other_case_involving_parents and other_cases.number <= 2 else "" }
+      - "more_cases_yes": ${ True if other_case_involving_parents and other_cases.number > 2 else "" }
+      - "estate_unknown": ${ True if child_estate == "unknown" else "" }
+      - "estate_0": ${ True if child_estate == "zero" else "" }
+      - "estate_other": ${ True if child_estate == "other" else "" }
+      - "estate_amount": ${ thousands(estate_value, show_decimals=True) if child_estate == "other" else "" }
+      - "income_unknown": ${ True if child_income == "unknown" else "" }
+      - "income_0": ${ True if child_income == "zero" else "" }
+      - "income_other": ${ True if child_income == "other" else "" }
+      - "income_amount": ${thousands(income_value, show_decimals=True) if child_income == "other" else ""}
+      - "parent_name_0": ${ parents[0].name_full() if has_legal_parent else "" }
+      - "parent_agrees_0": ${ True if has_legal_parent and parents[0].agrees else "" }
+      - "parent_is_dead_0": ${ True if has_legal_parent and parents[0].is_dead else "" }
+      - "parent_death_date_0": ${ parents[0].decease_date if has_legal_parent and parents[0].is_dead else "" }
+      - "parent_gave_up_0": ${ True if has_legal_parent and parents[0].gave_up_custody else "" }
+      - "parent_not_found_0": ${ True if has_legal_parent and parents[0].not_found else "" }
+      - "parent_last_contact_date_0": ${ parents[0].last_contact_date if has_legal_parent and parents[0].not_found else "" }
+      - "parent_last_contact_location_0": ${ parents[0].last_contact_location if has_legal_parent and parents[0].not_found else "" }
+      - "parent_unable_0": ${ True if has_legal_parent and parents[0].unable else "" }
 
-      - "parent_name_0": ${ "" }
-      - "parent_agrees_0": ${ "" }
-      - "parent_is_dead_0": ${ "" }
-      - "parent_death_date_0": ${ "" }
-      - "parent_gave_up_0": ${ "" }
-      - "parent_not_found_0": ${ "" }
-      - "parent_last_contact_date_0": ${ "" }
-      - "parent_last_contact_location_0": ${ "" }
-      - "parent_unable_0": ${ "" }
+      - "one_parent_cb": ${ True if has_legal_parent and parents.number() == 1 else "" }
+      - "two_parents_cb": ${ True if has_legal_parent and parents.number() > 1 else "" }
+      - "parent_name_1": ${ parents[1].name_full() if has_legal_parent and parents.number() > 1 else "" }
+      - "parent_agrees_1": ${ True if has_legal_parent and parents.number() > 1 and parents[1].agrees else "" }
+      - "parent_is_dead_1": ${ True if has_legal_parent and parents.number() > 1 and parents[1].is_dead else "" }
+      - "parent_death_date_1": ${ parents[1].decease_date if has_legal_parent and parents.number() > 1 and parents[1].is_dead else "" }
+      - "parent_gave_up_1": ${ True if has_legal_parent and parents.number() > 1 and parents[1].gave_up_custody else "" }
+      - "parent_not_found_1": ${ True if has_legal_parent and parents.number() > 1 and parents[1].not_found else "" }
+      - "parent_last_contact_date_1": ${ parents[1].last_contact_date if has_legal_parent and parents.number() > 1 and parents[1].not_found else "" }
+      - "parent_last_contact_location_1": ${ parents[1].last_contact_location if has_legal_parent and parents.number() > 1 and parents[1].not_found else "" }
+      - "parent_unable_1": ${ True if has_legal_parent and parents.number() > 1 and parents[1].unable else "" }
 
-      - "one_parent_cb": ${ "" }
-      - "two_parents_cb": ${ "" }
-      - "parent_name_1": ${ "" }
-      - "parent_agrees_1": ${ "" }
-      - "parent_is_dead_1": ${ "" }
-      - "parent_death_date_1": ${ "" }
-      - "parent_gave_up_1": ${ "" }
-      - "parent_not_found_1": ${ "" }
-      - "parent_last_contact_date_1": ${ "" }
-      - "parent_last_contact_location_1": ${ "" }
-      - "parent_unable_1": ${ "" }
+      - "child_agrees_no": ${ True if child.age_in_years() >= 14 and child.agrees == False else "" }
+      - "child_agrees_yes": ${ True if child.age_in_years() >= 14 and child.agrees else "" }
+      - "child_standby_no": ${ not previous_standby }
+      - "child_standby_yes": ${ previous_standby }
+      - "child_stg_no": ${ not current_stg }
+      - "child_stg_yes": ${ current_stg }
+      - "child_will_no": ${ not named_in_will }
+      - "child_will_yes": ${ named_in_will }
+      - "child_admin_no": ${ not immigration_separation }
+      - "child_admin_yes": ${ immigration_separation }
 
-      - "child_agrees_no": ${ "" }
-      - "child_agrees_yes": ${ "" }
-      - "child_standby_no": ${ "" }
-      - "child_standby_yes": ${ "" }
-      - "child_stg_no": ${ "" }
-      - "child_stg_yes": ${ "" }
-      - "child_will_no": ${ "" }
-      - "child_will_yes": ${ "" }
-      - "child_admin_no": ${ "" }
-      - "child_admin_yes": ${ "" }
+      - "guardian_name": ${ users[0].name_full() }
+      - "guardian_address": ${ users[0].address.on_one_line(bare=True) }
+      - "guardian_age": ${ users[0].age_in_years() }
+      - "guardian_job": ${ users[0].job }
+      - "guardian_disabled_yes": ${ users[0].is_disabled }
+      - "guardian_disabled_no": ${ not users[0].is_disabled }
+      - "guardian_no_felonies": ${ not users[0].has_felony_conviction }
+      - "guardian_yes_felonies": ${ users[0].has_felony_conviction }
+      - "guardian_felony_date_0": ${ users[0].felony_convictions[0].date if users[0].has_felony_conviction else "" }
+      - "guardian_felony_charge_0": ${ users[0].felony_convictions[0].charge if users[0].has_felony_conviction else "" }
+      - "guardian_felony_date_1": ${ users[0].felony_convictions[1].date if users[0].has_felony_conviction and users[0].felony_convictions.number() > 1 else "" }
+      - "guardian_felony_charge_1": ${ users[0].felony_convictions[1].charge if users[0].has_felony_conviction and users[0].felony_convictions.number() > 1 else "" }
+      - "guardian_felony_date_2": ${ users[0].felony_convictions[2].date if users[0].has_felony_conviction and users[0].felony_convictions.number() > 2  else "" }
+      - "guardian_felony_charge_2": ${ users[0].felony_convictions[2].charge if users[0].has_felony_conviction and users[0].felony_convictions.number() > 2 else "" }
+      - "guardian_dcfs_yes": ${ users[0].found_negligent }
+      - "guardian_dcfs_no": ${ not users[0].found_negligent }
 
-      - "guardian_name": ${ "" }
-      - "guardian_address": ${ "" }
-      - "guardian_age": ${ "" }
-      - "guardian_job": ${ "" }
-      - "guardian_disabled_yes": ${ "" }
-      - "guardian_disabled_no": ${ "" }
-      - "guardian_no_felonies": ${ "" }
-      - "guardian_yes_felonies": ${ "" }
-      - "guardian_felony_date_0": ${ "" }
-      - "guardian_felony_charge_0": ${ "" }
-      - "guardian_felony_date_1": ${ "" }
-      - "guardian_felony_charge_1": ${ "" }
-      - "guardian_felony_date_2": ${ "" }
-      - "guardian_felony_charge_2": ${ "" }
-      - "guardian_dcfs_yes": ${ "" }
-      - "guardian_dcfs_no": ${ "" }
-
-      - "co_guardian_no": ${ "" }
-      - "co_guardian_yes": ${ "" }
-      - "co_guardian_name": ${ "" }
-      - "co_guardian_address": ${ "" }
-      - "co_guardian_age": ${ "" }
-      - "co_guardian_job": ${ "" }
-      - "co_guardian_disabled_yes": ${ "" }
-      - "co_guardian_disabled_no": ${ "" }
-      - "co_guardian_no_felonies": ${ "" }
-      - "co_guardian_yes_felonies": ${ "" }
-      - "co_guardian_felony_date_0": ${ "" }
-      - "co_guardian_felony_charge_0": ${ "" }
-      - "co_guardian_felony_date_1": ${ "" }
-      - "co_guardian_felony_charge_1": ${ "" }
-      - "co_guardian_felony_date_2": ${ "" }
-      - "co_guardian_felony_charge_2": ${ "" }
-      - "co_guardian_dcfs_yes": ${ "" }
-      - "co_guardian_dcfs_no": ${ "" }
+      - "co_guardian_name": ${ users[1].name_full() }
+      - "co_guardian_address": ${ users[1].address.on_one_line(bare=True) }
+      - "co_guardian_age": ${ users[1].age_in_years() }
+      - "co_guardian_job": ${ users[1].job }
+      - "co_guardian_disabled_yes": ${ users[1].is_disabled }
+      - "co_guardian_disabled_no": ${ not users[1].is_disabled }
+      - "co_guardian_no_felonies": ${ not users[1].has_felony_conviction }
+      - "co_guardian_yes_felonies": ${ users[1].has_felony_conviction }
+      - "co_guardian_felony_date_0": ${ users[1].felony_convictions[0].date if users[1].has_felony_conviction else "" }
+      - "co_guardian_felony_charge_0": ${ users[1].felony_convictions[0].charge if users[1].has_felony_conviction else "" }
+      - "co_guardian_felony_date_1": ${ users[1].felony_convictions[1].date if users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
+      - "co_guardian_felony_charge_1": ${ users[1].felony_convictions[1].charge if users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
+      - "co_guardian_felony_date_2": ${ users[1].felony_convictions[2].date if users[1].has_felony_conviction and users[1].felony_convictions.number() > 2  else "" }
+      - "co_guardian_felony_charge_2": ${ users[1].felony_convictions[2].charge if users[1].has_felony_conviction and users[1].felony_convictions.number() > 2 else "" }
+      - "co_guardian_dcfs_yes": ${ users[1].found_negligent }
+      - "co_guardian_dcfs_no": ${ not users[1].found_negligent }
 
       - "guardianship_type_person_2": ${ True if guardianship_type == "person" else "" }
       - "guardianship_type_estate_2": ${ True if guardianship_type == "estate" else "" }
       - "guardianship_type_both_2": ${ True if guardianship_type == "both" else "" }
-      - "e_sign_name": ${ "" }
+      - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
       - "user_name": ${ users[0].name_full() }
-      - "for_self": ${ "" }
-      - "user_phone": ${ "" }
-      - "user_email": ${ "" }
-      - "user_address": ${ "" }
+      - "for_self": ${ True }
+      - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
+      - "user_email": ${ users[0].email if users[0].has_email_address else "" }
+      - "user_address": ${ users[0].address.on_one_line(bare=True) }
 
 
 ---
