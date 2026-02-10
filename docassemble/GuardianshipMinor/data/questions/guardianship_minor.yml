@@ -29,7 +29,7 @@ objects:
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
 code: |
-  al_form_type = 'existing_case'
+  al_form_type = 'starts_case'
   ilao_easy_form_title = "Guardianship of a minor"
   ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/guardianship-minor"
   form_name = "Petition for Guardianship of a Minor"
@@ -147,6 +147,7 @@ code: |
   nav.set_section('section_filing')  
   filing_intro
   build_relatives_list
+  build_notice_parties
   
   if child.age_in_years() >= 14:
     if not child.agrees:
@@ -172,7 +173,7 @@ code: |
   set_progress(100)
   nav.set_section('section_download')
   forms_assembling
-  
+  refresh_delivery_bundle
   snapshot_forms
   get_docs_screen
 ---
@@ -1008,6 +1009,33 @@ code: |
 
     return False
 ---
+code: |
+  def any_publication():
+ 
+    for person in relatives:
+      if person.address.unknown:
+        return True
+
+    return False
+
+---
+reconsider: True
+code: |
+  temp_list = []
+
+  if minor_is_married:
+    temp_list.append(spouse)
+  else:
+    if caregivers.there_are_any:
+      for caregiver in caregivers:
+        temp_list.append(caregiver)    	  
+    if adult_relatives.there_are_any:
+      for x in range(adult_relatives.number() - 1):
+        temp_list.append(adult_relatives[x])
+  relatives = ALPeopleList("relatives", elements = temp_list )
+  
+  build_relatives_list = True
+---
 reconsider: True
 code: |
   temp_list = []
@@ -1024,9 +1052,10 @@ code: |
     if adult_relatives.there_are_any:
       for x in range(adult_relatives.number() - 1):
         temp_list.append(adult_relatives[x])
-  relatives = ALPeopleList("relatives", elements = temp_list )
+  notice_parties = ALPeopleList("relatives", elements = temp_list )
   
-  build_relatives_list = True
+  build_notice_parties = True
+
 ---
 id: next steps
 question: |
@@ -1618,7 +1647,6 @@ subquestion: |
 
   You can download the form at the end of this program.
 ---
----
 depends on:
   - trial_court_index
   - cook_district
@@ -1638,11 +1666,9 @@ code: |
 ---
 id: Cook County district
 question: |
-  In which Cook County courthouse is your case?
+  In which Cook County courthouse will you file your case?
 subquestion: |
-  This information should be found near the top of your court papers.
-
-  ${ collapse_template(cook_district_help) }  
+  If you are not sure, visit **[Illinois Court Help](https://www.ilcourthelp.gov/)**, or you can call or text (833) 411-1121 for assistance.
 field: cook_district
 choices:
   - First Municipal District, Daley Center, 50 W. Washington Street, Chicago: 15
@@ -1651,17 +1677,6 @@ choices:
   - Fourth Municipal District, 1500 Maybrook Drive, Maywood: 18
   - Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview: 19
   - Sixth Municipal District, 16501 South Kedzie Parkway, Markham: 20
----
-template: cook_district_help
-subject: |
-  **What if I am not sure?**
-content: |  
-  Visit **[Illinois Court Help](https://www.ilcourthelp.gov/)**, or you can call or text (833) 411-1121 for assistance.
-
-
-
-
-
 ---
 id: knows delivery method
 generic object: ALIndividual
@@ -1803,9 +1818,11 @@ subquestion: |
 id: notice options for unknown address
 generic object: ALIndividual
 question: |
-  Service by publication
+  Notice by publication
 subquestion: |
-  Since you do not know ${x.name_full()}'s address, you will have to give them notice of the guardianship by publishing in a newspaper.
+  If you do not know ${x.name_full()}'s address now, you an add it to your forms later. They must receive notice of the guardianship at least **7 days** before the court hearing.
+  
+  If you cannot find ${x.name_full()}'s address, you will have to give them notice of the guardianship by publishing in a newspaper.
 
   EXPLAIN You will need to show the judge that you tried to find them by filling out a STATEMENT.
 
@@ -2052,12 +2069,41 @@ objects:
   - oath_co_guardian: ALDocument.using(title="Oath of Co-Guardian", filename="oath_of_co_guardian.pdf", has_addendum=False)
   - oath_and_bond: ALDocument.using(title="Oath and Bond of Guardian", filename="oath_of_guardian.pdf", has_addendum=False)
   - oath_and_bond_co_guardian: ALDocument.using(title="Oath and Bond of Co-Guardian", filename="oath_of_co_guardian.pdf", has_addendum=False)
-  - consent: ALDocument.using(title="Consent and Appearance (use one for each adult who agrees)", filename="consent_and_appearance.pdf", has_addendum=False)
+  - consent: ALDocument.using(title="Consent and Appearance (optional, use one for each adult who agrees)", filename="consent_and_appearance.pdf", has_addendum=False)
   - nomination: ALDocument.using(title="Nomination", filename="nomination.pdf", has_addendum=False)
   - notice: ALDocument.using(title="Notice of hearing", filename="notice.pdf", has_addendum=False)
-
+  - additional_proof_of_delivery: ALDocument.using(title="Additional Proof of Delivery", filename="additional_proof_of_delivery.pdf", has_addendum=False)
+  - statement: ALDocument.using(title="Statement for newspaper publication (optional, use one for each adult who can't be found)", filename="statement_for_publication.pdf", has_addendum=False)    
+  - publication_letter: ALDocument.using(title="Newspaper publication letter (optional, use if needed)", filename="newspaper_publication_letter.pdf", has_addendum=False)    
   - order: ALDocument.using(title="Order", filename="order.pdf", has_addendum=False)
+---
+#This needs to be a generic object because the notice parties list entries point to entries in other lists.
+generic object: ALIndividual
+objects:
+  - x.additional_proof: ALDocument.using(title="Additional Proof of Delivery", filename="additional_proof_of_delivery.pdf", has_addendum=False)
+---
+objects:
+  - additional_delivery_bundle: ALDocumentBundle.using(elements=[], title= "Additional Proof of Delivery", filename="additional_proof_of_delivery.pdf", has_addendum=False)
+---
+reconsider: True
+code: |
+  #deliveries_to_bundle will be used as the elements for the additional_delivery_bundle object created in the above block. This is its initial definition for the Appearance.
+  deliveries_to_bundle = []
+  additional_delivery_bundle.enabled = False
 
+  #enumerate allows us to reference the index in a for loop. This for loop appends each additional proof template to the deliveries_to_bundle object and sets the enabled trait for those templates.
+  for index, party in enumerate(notice_parties):
+    #If the index is 0 to 3, the party is included on the main notice form, and thus does not need to be added to additional proof of delivery
+    if index < 4:
+      party.additional_proof.enabled = False
+    #Any index > 3 must go to an additional proof of delivery form
+    elif index > 3:
+      party.additional_proof.enabled = True
+      additional_delivery_bundle.enabled = True
+      deliveries_to_bundle.append(party.additional_proof)
+
+  additional_delivery_bundle.elements = deliveries_to_bundle
+  refresh_delivery_bundle = True
 ---
 code: |
   instructions.enabled = True
@@ -2071,6 +2117,9 @@ code: |
   consent.enabled = False
   nomination.enabled = False
   notice.enabled = False
+  additional_proof_of_delivery.enabled = False
+  statement.enabled = False
+  publication_letter.enabled = False
   order.enabled = True
   
   if relatives.number() > 3:
@@ -2096,12 +2145,18 @@ code: |
 
   if relatives.number() > 0:
     notice.enabled = True
+
+  if any_publication():
+    statement.enabled = True
+    publication_letter.enabled = True
 ---
 objects:
   - petition_bundle: ALDocumentBundle.using(elements=[petition, additional_relatives, additional_cases], filename="petition_for_guardianship.pdf", title="Petition", enabled=True)
+  - notice_bundle: ALDocumentBundle.using(elements=[notice, additional_delivery_bundle], filename="notice.pdf", title="Notice of Hearing")
+
 ---
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition_bundle, oath, oath_co_guardian, oath_and_bond, oath_and_bond_co_guardian, consent, nomination, notice, order], filename="minor_guardianship_forms.pdf", title="All forms")
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition_bundle, oath, oath_co_guardian, oath_and_bond, oath_and_bond_co_guardian, consent, nomination, notice_bundle, statement, publication_letter, order], filename="minor_guardianship_forms.pdf", title="All forms")
 ---
 attachment:
   variable name: instructions[i]
@@ -2260,22 +2315,22 @@ attachment:
     - "guardian_felony_charge_2": ${ users[0].felony_convictions[2].charge if users[0].has_felony_conviction and users[0].felony_convictions.number() > 2 else "" }
     - "guardian_dcfs_yes": ${ users[0].found_negligent }
     - "guardian_dcfs_no": ${ not users[0].found_negligent }
-    - "co_guardian_name": ${ users[1].name_full() }
-    - "co_guardian_address": ${ users[1].address.on_one_line(bare=True) }
-    - "co_guardian_age": ${ users[1].age_in_years() }
-    - "co_guardian_job": ${ users[1].job }
-    - "co_guardian_disabled_yes": ${ users[1].is_disabled }
-    - "co_guardian_disabled_no": ${ not users[1].is_disabled }
-    - "co_guardian_no_felonies": ${ not users[1].has_felony_conviction }
-    - "co_guardian_yes_felonies": ${ users[1].has_felony_conviction }
-    - "co_guardian_felony_date_0": ${ users[1].felony_convictions[0].date if users[1].has_felony_conviction else "" }
-    - "co_guardian_felony_charge_0": ${ users[1].felony_convictions[0].charge if users[1].has_felony_conviction else "" }
-    - "co_guardian_felony_date_1": ${ users[1].felony_convictions[1].date if users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
-    - "co_guardian_felony_charge_1": ${ users[1].felony_convictions[1].charge if users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
-    - "co_guardian_felony_date_2": ${ users[1].felony_convictions[2].date if users[1].has_felony_conviction and users[1].felony_convictions.number() > 2  else "" }
-    - "co_guardian_felony_charge_2": ${ users[1].felony_convictions[2].charge if users[1].has_felony_conviction and users[1].felony_convictions.number() > 2 else "" }
-    - "co_guardian_dcfs_yes": ${ users[1].found_negligent }
-    - "co_guardian_dcfs_no": ${ not users[1].found_negligent }
+    - "co_guardian_name": ${ users[1].name_full() if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_address": ${ users[1].address.on_one_line(bare=True) if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_age": ${ users[1].age_in_years() if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_job": ${ users[1].job if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_disabled_yes": ${ users[1].is_disabled if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_disabled_no": ${ not users[1].is_disabled if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_no_felonies": ${ not users[1].has_felony_conviction if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_yes_felonies": ${ users[1].has_felony_conviction if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_felony_date_0": ${ users[1].felony_convictions[0].date if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction else "" }
+    - "co_guardian_felony_charge_0": ${ users[1].felony_convictions[0].charge if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction else "" }
+    - "co_guardian_felony_date_1": ${ users[1].felony_convictions[1].date if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
+    - "co_guardian_felony_charge_1": ${ users[1].felony_convictions[1].charge if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
+    - "co_guardian_felony_date_2": ${ users[1].felony_convictions[2].date if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 2  else "" }
+    - "co_guardian_felony_charge_2": ${ users[1].felony_convictions[2].charge if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 2 else "" }
+    - "co_guardian_dcfs_yes": ${ users[1].found_negligent if add_co_guardian and valid_co_guardian() else ""}
+    - "co_guardian_dcfs_no": ${ not users[1].found_negligent if add_co_guardian and valid_co_guardian() else ""}
     - "guardianship_type_person_2": ${ True if guardianship_type == "person" else "" }
     - "guardianship_type_estate_2": ${ True if guardianship_type == "estate" else "" }
     - "guardianship_type_both_2": ${ True if guardianship_type == "both" else "" }
@@ -2602,23 +2657,319 @@ attachment:
         % endif
     - "clerk_phone": ${ trial_court.phone }
     - "clerk_website": ${ trial_court.website }
-
-
-
     - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
     - "user_name": ${ users[0].name_full() }
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
     - "user_address": ${ users[0].address.on_one_line(bare=True) }
+
+    - "delivery_party_name_0": ${ notice_parties[0].name_full() }
+    - "is_delivery_party_parent_0": ${ True if notice_parties[0].notice_relationship == "parent" else "" }
+    - "is_delivery_party_sibling_0": ${ True if notice_parties[0].notice_relationship == "sibling" else "" }
+    - "is_delivery_party_minor_0": ${ True if notice_parties[0].notice_relationship == "minor" else "" }
+    - "is_delivery_party_custody_0": ${ True if notice_parties[0].notice_relationship == "custody" else "" }
+    - "is_delivery_party_other_0": ${ True if notice_parties[0].notice_relationship == "other" else "" }
+    - "delivery_party_other_relationship_0": ${ notice_parties[0].other_notice_relationship if notice_parties[0].notice_relationship == "other" else "" }
+    - "delivery_party_address_0": ${ notice_parties[0].address.on_one_line(bare=True) if notice_parties[0].address.unknown == False else "" }
+      
+    - "is_delivery_party_hand_0": ${ notice_parties[0].hand_delivery if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method else '' }
+    - "is_delivery_party_mail_0": ${ notice_parties[0].mail_delivery if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method else '' }
+    
+    - "delivery_party_mail_location_0": |
+        % if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method and notice_parties[0].mail_delivery:
+        % if notice_parties[0].delivery_mail_address != "" and notice_parties[0].delivery_mail_city != "" and notice_parties[0].delivery_mail_state != "":
+        ${notice_parties[0].delivery_mail_address }, ${notice_parties[0].delivery_mail_city}, ${ state_name(notice_parties[0].delivery_mail_state) }
+        % elif notice_parties[0].delivery_mail_address != "" and notice_parties[0].delivery_mail_city != "":
+        ${notice_parties[0].delivery_mail_address }, ${notice_parties[0].delivery_mail_city}
+        % elif notice_parties[0].delivery_mail_address != "" and notice_parties[0].delivery_mail_state != "":
+        ${notice_parties[0].delivery_mail_address }, ${ state_name(notice_parties[0].delivery_mail_state) }
+        % elif notice_parties[0].delivery_mail_city != "" and notice_parties[0].delivery_mail_state != "":
+        ${notice_parties[0].delivery_mail_city}, ${ state_name(notice_parties[0].delivery_mail_state) }
+        % elif notice_parties[0].delivery_mail_address != "":
+        ${notice_parties[0].delivery_mail_address}
+        % elif notice_parties[0].delivery_mail_city != "":
+        ${notice_parties[0].delivery_mail_city}
+        % else:
+        ${state_name(notice_parties[0].delivery_mail_state)}
+        % endif
+        % else:
+        ${ "" }
+        % endif
+    - "is_delivery_party_jail_0": ${ True if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method and notice_parties[0].jail_delivery else '' }
+    - "delivery_party_jail_name_0": |
+        % if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method and notice_parties[0].jail_delivery:
+        % if notice_parties[0].delivery_jail_name != "" and notice_parties[0].jail_delivery_address.address != "" and notice_parties[0].jail_delivery_address.city != "" and notice_parties[0].jail_delivery_address.state != "":
+        ${ notice_parties[0].delivery_jail_name }, ${ notice_parties[0].jail_delivery_address.on_one_line(bare=True)}
+        % elif notice_parties[0].delivery_jail_name == "":
+        ${ notice_parties[0].jail_delivery_address.on_one_line(bare=True)}
+        % else:
+        ${ notice_parties[0].delivery_jail_name }
+        % endif
+        % else:
+        ${""}
+        % endif
+    - "delivery_party_date_0": ${ notice_parties[0].delivery_date if notice_parties[0].knows_delivery_method and notice_parties[0].knows_delivery_date else '' }
+    - "delivery_party_time_0": ${ format_time(notice_parties[0].delivery_time, format='h:mm a') if notice_parties[0].knows_delivery_method and notice_parties[0].knows_delivery_time else '' }
+    
+    - "delivery_party_name_1": ${ notice_parties[1].name_full() if notice_parties.number() > 1 else ''}
+    - "is_delivery_party_parent_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "parent" else "" }
+    - "is_delivery_party_sibling_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "sibling" else "" }
+    - "is_delivery_party_minor_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "minor" else "" }
+    - "is_delivery_party_custody_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "custody" else "" }
+    - "is_delivery_party_other_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "other" else "" }
+    - "delivery_party_other_relationship_1": ${ notice_parties[1].other_notice_relationship if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "other" else "" }
+    - "delivery_party_address_1": ${ notice_parties[1].address.on_one_line(bare=True) if notice_parties.number() > 1 and notice_parties[1].address.unknown == False else "" }
+    
+    - "is_delivery_party_hand_1": ${ notice_parties[1].hand_delivery if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method else '' }
+    - "is_delivery_party_mail_1": ${ notice_parties[1].mail_delivery if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method else '' }
+    
+    - "delivery_party_mail_location_1": |
+        % if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method and notice_parties[1].mail_delivery:
+        % if notice_parties[1].delivery_mail_address != "" and notice_parties[1].delivery_mail_city != "" and notice_parties[1].delivery_mail_state != "":
+        ${notice_parties[1].delivery_mail_address }, ${notice_parties[1].delivery_mail_city}, ${ state_name(notice_parties[1].delivery_mail_state) }
+        % elif notice_parties[1].delivery_mail_address != "" and notice_parties[1].delivery_mail_city != "":
+        ${notice_parties[1].delivery_mail_address }, ${notice_parties[1].delivery_mail_city}
+        % elif notice_parties[1].delivery_mail_address != "" and notice_parties[1].delivery_mail_state != "":
+        ${notice_parties[1].delivery_mail_address }, ${ state_name(notice_parties[1].delivery_mail_state) }
+        % elif notice_parties[1].delivery_mail_city != "" and notice_parties[1].delivery_mail_state != "":
+        ${notice_parties[1].delivery_mail_city}, ${ state_name(notice_parties[1].delivery_mail_state) }
+        % elif notice_parties[1].delivery_mail_address != "":
+        ${notice_parties[1].delivery_mail_address}
+        % elif notice_parties[1].delivery_mail_city != "":
+        ${notice_parties[1].delivery_mail_city}
+        % else:
+        ${state_name(notice_parties[1].delivery_mail_state)}
+        % endif
+        % else:
+        ${ "" }
+        % endif
+    
+    - "is_delivery_party_jail_1": ${ True if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method and notice_parties[1].jail_delivery else '' }
+    
+    - "delivery_party_jail_name_1": |
+        % if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method and notice_parties[1].jail_delivery:
+        % if notice_parties[1].delivery_jail_name != "" and notice_parties[1].jail_delivery_address.address != "" and notice_parties[1].jail_delivery_address.city != "" and notice_parties[1].jail_delivery_address.state != "":
+        ${ notice_parties[1].delivery_jail_name }, ${ notice_parties[1].jail_delivery_address.on_one_line(bare=True)}
+        % elif notice_parties[1].delivery_jail_name == "":
+        ${ notice_parties[1].jail_delivery_address.on_one_line(bare=True)}
+        % else:
+        ${ notice_parties[1].delivery_jail_name }
+        % endif
+        % else:
+        ${""}
+        % endif
+    
+    - "delivery_party_date_1": ${ notice_parties[1].delivery_date if notice_parties.number() > 1 and notice_parties[1].knows_delivery_method and notice_parties[1].knows_delivery_date else '' }
+    - "delivery_party_time_1": ${ format_time(notice_parties[1].delivery_time, format='h:mm a') if notice_parties.number() > 1 and notice_parties[1].knows_delivery_method and notice_parties[1].knows_delivery_time else '' }
+
+    - "delivery_party_name_2": ${ notice_parties[2].name_full() if notice_parties.number() > 2 else '' }
+    - "is_delivery_party_parent_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "parent" else "" }
+    - "is_delivery_party_sibling_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "sibling" else "" }
+    - "is_delivery_party_minor_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "minor" else "" }
+    - "is_delivery_party_custody_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "custody" else "" }
+    - "is_delivery_party_other_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "other" else "" }
+    - "delivery_party_other_relationship_2": ${ notice_parties[2].other_notice_relationship if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "other" else "" }
+    - "delivery_party_address_2": ${ notice_parties[2].address.on_one_line(bare=True) if notice_parties.number() > 2 and notice_parties[2].address.unknown == False else "" }
+    
+    - "is_delivery_party_hand_2": ${ notice_parties[2].hand_delivery if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method else '' }
+    - "is_delivery_party_mail_2": ${ notice_parties[2].mail_delivery if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method else '' }
+    
+    - "delivery_party_mail_location_2": |
+        % if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method and notice_parties[2].mail_delivery:
+        % if notice_parties[2].delivery_mail_address != "" and notice_parties[2].delivery_mail_city != "" and notice_parties[2].delivery_mail_state != "":
+        ${notice_parties[2].delivery_mail_address }, ${notice_parties[2].delivery_mail_city}, ${ state_name(notice_parties[2].delivery_mail_state) }
+        % elif notice_parties[2].delivery_mail_address != "" and notice_parties[2].delivery_mail_city != "":
+        ${notice_parties[2].delivery_mail_address }, ${notice_parties[2].delivery_mail_city}
+        % elif notice_parties[2].delivery_mail_address != "" and notice_parties[2].delivery_mail_state != "":
+        ${notice_parties[2].delivery_mail_address }, ${ state_name(notice_parties[2].delivery_mail_state) }
+        % elif notice_parties[2].delivery_mail_city != "" and notice_parties[2].delivery_mail_state != "":
+        ${notice_parties[2].delivery_mail_city}, ${ state_name(notice_parties[2].delivery_mail_state) }
+        % elif notice_parties[2].delivery_mail_address != "":
+        ${notice_parties[2].delivery_mail_address}
+        % elif notice_parties[2].delivery_mail_city != "":
+        ${notice_parties[2].delivery_mail_city}
+        % else:
+        ${state_name(notice_parties[2].delivery_mail_state)}
+        % endif
+        % else:
+        ${ "" }
+        % endif
+    
+    - "is_delivery_party_jail_2": ${ True if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method and notice_parties[2].jail_delivery else '' }
+    
+    - "delivery_party_jail_name_2": |
+        % if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method and notice_parties[2].jail_delivery:
+        % if notice_parties[2].delivery_jail_name != "" and notice_parties[2].jail_delivery_address.address != "" and notice_parties[2].jail_delivery_address.city != "" and notice_parties[2].jail_delivery_address.state != "":
+        ${ notice_parties[2].delivery_jail_name }, ${ notice_parties[2].jail_delivery_address.on_one_line(bare=True)}
+        % elif notice_parties[2].delivery_jail_name == "":
+        ${ notice_parties[2].jail_delivery_address.on_one_line(bare=True)}
+        % else:
+        ${ notice_parties[2].delivery_jail_name }
+        % endif
+        % else:
+        ${""}
+        % endif
+    
+    - "delivery_party_date_2": ${ notice_parties[2].delivery_date if notice_parties.number() > 2 and notice_parties[2].knows_delivery_method and notice_parties[2].knows_delivery_date else '' }
+    - "delivery_party_time_2": ${ format_time(notice_parties[2].delivery_time, format='h:mm a') if notice_parties.number() > 2 and notice_parties[2].knows_delivery_method and notice_parties[2].knows_delivery_time else '' }
+
+    - "delivery_party_name_3": ${ notice_parties[3].name_full() if notice_parties.number() > 3 else '' }
+    - "is_delivery_party_parent_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "parent" else "" }
+    - "is_delivery_party_sibling_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "sibling" else "" }
+    - "is_delivery_party_minor_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "minor" else "" }
+    - "is_delivery_party_custody_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "custody" else "" }
+    - "is_delivery_party_other_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "other" else "" }
+    - "delivery_party_other_relationship_3": ${ notice_parties[3].other_notice_relationship if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "other" else "" }
+    - "delivery_party_address_3": ${ notice_parties[3].address.on_one_line(bare=True) if notice_parties.number() > 3 and notice_parties[3].address.unknown == False else "" }
+    
+    - "is_delivery_party_hand_3": ${ notice_parties[3].hand_delivery if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method else '' }
+    - "is_delivery_party_mail_3": ${ notice_parties[3].mail_delivery if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method else '' }
+    
+    - "delivery_party_mail_location_3": |
+        % if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method and notice_parties[3].mail_delivery:
+        % if notice_parties[3].delivery_mail_address != "" and notice_parties[3].delivery_mail_city != "" and notice_parties[3].delivery_mail_state != "":
+        ${notice_parties[3].delivery_mail_address }, ${notice_parties[3].delivery_mail_city}, ${ state_name(notice_parties[3].delivery_mail_state) }
+        % elif notice_parties[3].delivery_mail_address != "" and notice_parties[3].delivery_mail_city != "":
+        ${notice_parties[3].delivery_mail_address }, ${notice_parties[3].delivery_mail_city}
+        % elif notice_parties[3].delivery_mail_address != "" and notice_parties[3].delivery_mail_state != "":
+        ${notice_parties[3].delivery_mail_address }, ${ state_name(notice_parties[3].delivery_mail_state) }
+        % elif notice_parties[3].delivery_mail_city != "" and notice_parties[3].delivery_mail_state != "":
+        ${notice_parties[3].delivery_mail_city}, ${ state_name(notice_parties[3].delivery_mail_state) }
+        % elif notice_parties[3].delivery_mail_address != "":
+        ${notice_parties[3].delivery_mail_address}
+        % elif notice_parties[3].delivery_mail_city != "":
+        ${notice_parties[3].delivery_mail_city}
+        % else:
+        ${state_name(notice_parties[3].delivery_mail_state)}
+        % endif
+        % else:
+        ${ "" }
+        % endif
+    
+    - "is_delivery_party_jail_3": ${ True if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method and notice_parties[3].jail_delivery else '' }
+    
+    - "delivery_party_jail_name_3": |
+        % if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method and notice_parties[3].jail_delivery:
+        % if notice_parties[3].delivery_jail_name != "" and notice_parties[3].jail_delivery_address.address != "" and notice_parties[3].jail_delivery_address.city != "" and notice_parties[3].jail_delivery_address.state != "":
+        ${ notice_parties[3].delivery_jail_name }, ${ notice_parties[3].jail_delivery_address.on_one_line(bare=True)}
+        % elif notice_parties[3].delivery_jail_name == "":
+        ${ notice_parties[3].jail_delivery_address.on_one_line(bare=True)}
+        % else:
+        ${ notice_parties[3].delivery_jail_name }
+        % endif
+        % else:
+        ${""}
+        % endif
+    
+    - "delivery_party_date_3": ${ notice_parties[3].delivery_date if notice_parties.number() > 3 and notice_parties[3].knows_delivery_method and notice_parties[3].knows_delivery_date else '' }
+    - "delivery_party_time_3": ${ format_time(notice_parties[3].delivery_time, format='h:mm a') if notice_parties.number() > 3 and notice_parties[3].knows_delivery_method and notice_parties[3].knows_delivery_time else '' }
+
     - "e_sign_name_2": ${ users[0].name_full() if e_signature else "" }
     - "user_name_2": ${ users[0].name_full() }
     - "for_self_2": ${ True }
     - "user_phone_2": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email_2": ${ users[0].email if users[0].has_email_address else "" }
     - "user_address_2": ${ users[0].address.on_one_line(bare=True) }
+---
+generic object: ALIndividual
+attachment:
+  variable name: x.additional_proof[i]
+  name: additional_proof
+  filename: additional_proof
+  skip undefined: True
+  editable: False
+  pdf template file: additional_proof_of_delivery.pdf
+  fields:
+    - "county": ${ trial_court.address.county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
+    - "delivery_party_name_0": ${ x.name_full() }
+    - "is_delivery_party_parent_0": ${ True if x.notice_relationship == "parent" else "" }
+    - "is_delivery_party_sibling_0": ${ True if x.notice_relationship == "sibling" else "" }
+    - "is_delivery_party_minor_0": ${ True if x.notice_relationship == "minor" else "" }
+    - "is_delivery_party_custody_0": ${ True if x.notice_relationship == "custody" else "" }
+    - "is_delivery_party_other_0": ${ True if x.notice_relationship == "other" else "" }
+    - "delivery_party_other_relationship_0": ${ x.other_notice_relationship if x.notice_relationship == "other" else "" }
+    - "delivery_party_address_0": ${ x.address.on_one_line(bare=True) if x.address.unknown == False else "" }
+      
+    - "is_delivery_party_hand_0": ${ x.hand_delivery if x.address.unknown == False and x.knows_delivery_method else '' }
+    - "is_delivery_party_mail_0": ${ x.mail_delivery if x.address.unknown == False and x.knows_delivery_method else '' }
+    
+    - "delivery_party_mail_location_0": |
+        % if x.address.unknown == False and x.knows_delivery_method and x.mail_delivery:
+        % if x.delivery_mail_address != "" and x.delivery_mail_city != "" and x.delivery_mail_state != "":
+        ${x.delivery_mail_address }, ${x.delivery_mail_city}, ${ state_name(x.delivery_mail_state) }
+        % elif x.delivery_mail_address != "" and x.delivery_mail_city != "":
+        ${x.delivery_mail_address }, ${x.delivery_mail_city}
+        % elif x.delivery_mail_address != "" and x.delivery_mail_state != "":
+        ${x.delivery_mail_address }, ${ state_name(x.delivery_mail_state) }
+        % elif x.delivery_mail_city != "" and x.delivery_mail_state != "":
+        ${x.delivery_mail_city}, ${ state_name(x.delivery_mail_state) }
+        % elif x.delivery_mail_address != "":
+        ${x.delivery_mail_address}
+        % elif x.delivery_mail_city != "":
+        ${x.delivery_mail_city}
+        % else:
+        ${state_name(x.delivery_mail_state)}
+        % endif
+        % else:
+        ${ "" }
+        % endif
+    - "is_delivery_party_jail_0": ${ True if x.address.unknown == False and x.knows_delivery_method and x.jail_delivery else '' }
+    - "delivery_party_jail_name_0": |
+        % if x.address.unknown == False and x.knows_delivery_method and x.jail_delivery:
+        % if x.delivery_jail_name != "" and x.jail_delivery_address.address != "" and x.jail_delivery_address.city != "" and x.jail_delivery_address.state != "":
+        ${ x.delivery_jail_name }, ${ x.jail_delivery_address.on_one_line(bare=True)}
+        % elif x.delivery_jail_name == "":
+        ${ x.jail_delivery_address.on_one_line(bare=True)}
+        % else:
+        ${ x.delivery_jail_name }
+        % endif
+        % else:
+        ${""}
+        % endif
+    - "delivery_party_date_0": ${ x.delivery_date if x.knows_delivery_method and x.knows_delivery_date else '' }
+    - "delivery_party_time_0": ${ format_time(x.delivery_time, format='h:mm a') if x.knows_delivery_method and x.knows_delivery_time else '' }
+
+---
+attachment:
+  variable name: statement[i]
+  name: statement
+  filename: statement
+  skip undefined: True
+  editable: True
+  pdf template file: statement_for_publication.pdf
+  fields:
+    - "county": ${ trial_court.address.county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
+    - "child_name_2": ${ child.name_full() }
+    - "guardian_name": ${ users[0].name_full() }
+    - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
+    - "user_name": ${ users[0].name_full() }
+    - "for_self": ${ True }
+    - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
+    - "user_email": ${ users[0].email if users[0].has_email_address else "" }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
+
+---
+attachment:
+  variable name: publication_letter[i]
+  name: publication_letter
+  filename: publication_letter
+  skip undefined: True
+  editable: True
+  pdf template file: newspaper_publication_letter.pdf
+  fields:
+    - "county": ${ trial_court.address.county }
+    - "case_number": ${ "" }
+    - "child_name": ${ child.name_full() }
 
 
+
+
+      
 ---
 attachment:
   variable name: order[i]
