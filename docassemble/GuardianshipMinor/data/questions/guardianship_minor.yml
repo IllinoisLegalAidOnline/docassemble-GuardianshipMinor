@@ -160,7 +160,9 @@ code: |
   
   hand_delivery_info
 
-  filing_county 
+  courthouse_info
+  if trial_court_index == -1:
+    cook_district
   if has_court_date:
     hearing_date
   attend_court
@@ -225,16 +227,17 @@ question: |
 subquestion: |
   **UPDATE**
   
-  To use this program you will need: 
+  Information you will need to fill out the forms:
 
-  * A child support order from an Illinois court, 
-  * A change of circumstances for you, the other parent, or the children,
-  * Information about the other parent, and  
-  * Information about the other parent's lawyer, if any. 
+  * Name,birth date, and address of the minor,
+  * Names and addresses of the minor’s nearest relatives and the person who has custody of the minor,
+  * Approximate value of minor’s estate (property) and annual income from all sources,
+  * Your name, address, age, occupation, telephone, email address, and criminal history (and of the co-guardian, if any),
+  * Details about other court cases involving the minor and their parents,
+  * Information about the parents, such as most recent contact with minor, reasons why they are unable to care for the minor, or date of death, and
+  * Details about any current or previous standby or short-term guardians of the minor.
 
-  You can find most of this information on other court papers you have about this case. 
-
-  Set aside 10 to 20 minutes to finish this program. You can log in and save your work to continue later. 
+  Set aside 20 to 30 minutes to finish this program. You can log in and save your work to continue later. 
  
   ${ collapse_template(help_example) }  
 
@@ -571,6 +574,11 @@ fields:
     show if:
       variable: parents[i].is_dead
       is: True
+  - note: |
+      You may need to provide the court with a copy of ${parents[i].name_full()}'s death certificate.
+    show if:
+      variable: parents[i].is_dead
+      is: True      
   - "${parents[i].name_full()} voluntarily gave up custody of ${child.name_full()}.": parents[i].gave_up_custody
     datatype: yesnowide
   - "${parents[i].name_full()} cannot be found.": parents[i].not_found
@@ -1568,15 +1576,15 @@ generic object: ALIndividual
 question: |
   Does ${x.name_full()} agree to the guardianship of ${ child.name_full()}?
 subquestion: |
-  If ${x.name_full()} agrees to the guardianship, they will have to sign a CONSENT and APPEARANCE form that you file with your Petition. Alternatively, they can give their consent in court.
+  If ${x.name_full()} agrees to the guardianship, they will have to sign a CONSENT and APPEARANCE form that they can file with the court. Alternatively, they can give their consent in court.
 
   If they do not agree, or if you do not know, you will have to send them notice of the guardianship. 
  
-  UPDATE: The Consent & Appearance must be signed in front of a notary public, filed. You can download the form at the end of this program.
+  UPDATE: The Consent & Appearance must be signed in front of a notary public, filed. You can download a form that you can give them at the end of this program.
 
-  **Note:** Be sure that they agree. If they do not agree and file a CONSENT, you will have to give them notice of the guardianship some other way.
+  **Note:** UPDATE Be sure that they agree. If they do not agree and file a CONSENT, you will have to give them notice of the guardianship some other way.
 
-  If you do not know, select **No**.
+  UPDATE - If you do not know, select **No**.
 fields:
   - "Does ${x.name_full()} agree to the guardianship?": x.agrees
     datatype: yesnoradio
@@ -1609,6 +1617,51 @@ subquestion: |
   **Note:** Be sure that they agree. If they do not agree and file a CONSENT, you will have to give them notice of the guardianship some other way.  
 
   You can download the form at the end of this program.
+---
+---
+depends on:
+  - trial_court_index
+  - cook_district
+code: |
+  if trial_court_index == -1:
+    trial_court = court_list.as_court('trial_court', cook_district)
+  else:
+    trial_court = court_list.as_court('trial_court', trial_court_index)
+    
+  court_name = str(trial_court.name)
+  court_street_address = str(trial_court.address.address)
+  court_city = str(trial_court.address.city)
+  court_state = str(trial_court.address.state)
+  court_zip = str(trial_court.address.zip)
+  courthouse_info = court_name + ", " + court_street_address + ", " + court_city + ", " + court_state
+
+---
+id: Cook County district
+question: |
+  In which Cook County courthouse is your case?
+subquestion: |
+  This information should be found near the top of your court papers.
+
+  ${ collapse_template(cook_district_help) }  
+field: cook_district
+choices:
+  - First Municipal District, Daley Center, 50 W. Washington Street, Chicago: 15
+  - Second Municipal District, 5600 Old Orchard Road, Skokie: 16
+  - Third Municipal District, 2121 Euclid Avenue, Rolling Meadows: 17
+  - Fourth Municipal District, 1500 Maybrook Drive, Maywood: 18
+  - Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview: 19
+  - Sixth Municipal District, 16501 South Kedzie Parkway, Markham: 20
+---
+template: cook_district_help
+subject: |
+  **What if I am not sure?**
+content: |  
+  Visit **[Illinois Court Help](https://www.ilcourthelp.gov/)**, or you can call or text (833) 411-1121 for assistance.
+
+
+
+
+
 ---
 id: knows delivery method
 generic object: ALIndividual
@@ -1781,9 +1834,29 @@ question: |
 subquestion: |
   You should file in the county where ${child.name_full()} lives.
 fields:
-  - County: filing_county
-    code:
-      court_list._load_courts()["address_county"].unique()
+  - County: trial_court_index
+    datatype: integer
+    code: |
+      court_county_lookup()
+---
+code: |
+  def court_county_lookup(lowercase=False):
+    all_court_counties = court_list._load_courts()['address_county'].items()
+    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
+    for court in all_court_counties:
+      if court[1] != "Cook":
+        court_name = court[1].lower() if lowercase else court[1]
+        filtered_courts.append((court[0],court_name))
+    return sorted( filtered_courts, key=lambda y: y[1])
+---
+depends on:
+  - trial_court_index
+code: |
+  if trial_court_index == -1:
+    trial_court = court_list.as_court('trial_court', 15)
+    trial_court.address.county = "Cook"
+  else:
+    trial_court = court_list.as_court('trial_court', trial_court_index)
 ---
 id: notice intro
 continue button field: notice_intro
@@ -1981,6 +2054,7 @@ objects:
   - oath_and_bond_co_guardian: ALDocument.using(title="Oath and Bond of Co-Guardian", filename="oath_of_co_guardian.pdf", has_addendum=False)
   - consent: ALDocument.using(title="Consent and Appearance (use one for each adult who agrees)", filename="consent_and_appearance.pdf", has_addendum=False)
   - nomination: ALDocument.using(title="Nomination", filename="nomination.pdf", has_addendum=False)
+  - notice: ALDocument.using(title="Notice of hearing", filename="notice.pdf", has_addendum=False)
 
   - order: ALDocument.using(title="Order", filename="order.pdf", has_addendum=False)
 
@@ -1996,6 +2070,7 @@ code: |
   oath_and_bond_co_guardian.enabled = False
   consent.enabled = False
   nomination.enabled = False
+  notice.enabled = False
   order.enabled = True
   
   if relatives.number() > 3:
@@ -2018,12 +2093,15 @@ code: |
   if child.age_in_years() >= 14:
     if child.agrees:
       nomination.enabled = True
+
+  if relatives.number() > 0:
+    notice.enabled = True
 ---
 objects:
   - petition_bundle: ALDocumentBundle.using(elements=[petition, additional_relatives, additional_cases], filename="petition_for_guardianship.pdf", title="Petition", enabled=True)
 ---
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition_bundle, oath, oath_co_guardian, oath_and_bond, oath_and_bond_co_guardian, consent, nomination, order], filename="minor_guardianship_forms.pdf", title="All forms")
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, petition_bundle, oath, oath_co_guardian, oath_and_bond, oath_and_bond_co_guardian, consent, nomination, notice, order], filename="minor_guardianship_forms.pdf", title="All forms")
 ---
 attachment:
   variable name: instructions[i]
@@ -2043,7 +2121,7 @@ attachment:
   editable: False
   pdf template file: petition_for_guardianship.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "case_number_2": ${ "" }
     - "case_number_3": ${ "" }
@@ -2216,7 +2294,7 @@ attachment:
   editable: False
   pdf template file: additional_relatives.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
     - "relative_name_4": ${ relatives[4].name_full() }
@@ -2246,7 +2324,7 @@ attachment:
   editable: False
   pdf template file: additional_cases.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
     - "other_case_number_2": ${ other_cases[2].name.text if other_cases.number > 2 else "" }
@@ -2384,7 +2462,7 @@ attachment:
   editable: False
   pdf template file: oath.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
     - "guardian_name": ${ users[0].name_full() }
@@ -2403,7 +2481,7 @@ attachment:
   editable: False
   pdf template file: oath.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
     - "guardian_name": ${ users[1].name_full() }
@@ -2421,7 +2499,7 @@ attachment:
   editable: False
   pdf template file: oath_and_bond.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "case_number_2": ${ "" }
     - "child_name": ${ child.name_full() }
@@ -2443,7 +2521,7 @@ attachment:
   editable: False
   pdf template file: oath_and_bond.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "case_number_2": ${ "" }
     - "child_name": ${ child.name_full() }
@@ -2464,7 +2542,7 @@ attachment:
   editable: False
   pdf template file: consent_and_appearance.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "case_number_2": ${ "" }
     - "child_name": ${ child.name_full() }
@@ -2482,14 +2560,63 @@ attachment:
   editable: False
   pdf template file: nomination.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
     - "child_name_2": ${ child.name_full() }
     - "child_name_3": ${ child.name_full() }
     - "guardian_name": ${ users[0].name_full() }
     - "co_guardian_name": ${ users[1].name_full() if add_co_guardian and valid_co_guardian() else "" }
+---
+attachment:
+  variable name: notice[i]
+  name: notice
+  filename: notice
+  skip undefined: True
+  editable: False
+  pdf template file: notice.pdf
+  fields:
+    - "county": ${ trial_court.address.county }
+    - "case_number": ${ "" }
+    - "case_number_2": ${ "" }
+    - "case_number_3": ${ "" }
+    - "case_number_4": ${ "" }
+    - "case_number_5": ${ "" }
+    - "hearing_date": ${ hearing_date if (defined('hearing_date') and has_court_date) else '' }
+    - "hearing_time": ${ format_time(hearing_time, format='h:mm') if (defined('hearing_time') and has_court_date) else '' }
+    - "hearing_am_checkbox": ${ True if (has_court_date and format_time(hearing_time, format='a')=='AM') else '' }
+    - "hearing_pm_checkbox": ${ True if (has_court_date and format_time(hearing_time, format='a')=='PM') else '' }
+    - "hearing_courtroom": ${ courtroom if has_court_date else '' }
+    - "in_person_cb": ${ attend_court['in_person'] }
+    - "remote_cb": ${  attend_court['remote'] }
+    - "remote_url": ${ remote_website if attend_court['remote'] == True else '' }
+    - "remote_login": ${  remote_login.replace("\n", " ").replace("\r", " ") if attend_court['remote'] == True else ''}
+    - "remote_phone": ${ phone_number_formatted(remote_phone) if attend_court['remote'] == True else '' }
+    - "courthouse_address": |
+        % if has_court_date:
+        % if courtroom != "":          
+        ${ courthouse_info + ", Room # " + courtroom }
+        % endif
+        % else:
+        ${ courthouse_info }          
+        % endif
+    - "clerk_phone": ${ trial_court.phone }
+    - "clerk_website": ${ trial_court.website }
 
+
+
+    - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
+    - "user_name": ${ users[0].name_full() }
+    - "for_self": ${ True }
+    - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
+    - "user_email": ${ users[0].email if users[0].has_email_address else "" }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
+    - "e_sign_name_2": ${ users[0].name_full() if e_signature else "" }
+    - "user_name_2": ${ users[0].name_full() }
+    - "for_self_2": ${ True }
+    - "user_phone_2": ${ phone_number_formatted(users[0].phone_number) }
+    - "user_email_2": ${ users[0].email if users[0].has_email_address else "" }
+    - "user_address_2": ${ users[0].address.on_one_line(bare=True) }
 
 
 ---
@@ -2501,7 +2628,7 @@ attachment:
   editable: False
   pdf template file: order.pdf
   fields:
-    - "county": ${ filing_county }
+    - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
 
@@ -2867,10 +2994,32 @@ review:
       % endif
     show if: child.age_in_years() >= 14 and child.agrees == False and child.knows_delivery_method
     
-  - Edit: filing_county
+  - Edit: 
+      - trial_court_index
+      - recompute:
+        - trial_court
     button: |
       **County where you will file the petition:**
-      ${ filing_county }
+      ${ trial_court.address.county }
+  - Edit: cook_district
+    button: |
+      **Cook County courthouse:**
+      % if cook_district == "15":
+      ${ "Daley Center, 50 W. Washington Street, Chicago" }
+      % elif cook_district == "16":
+      ${ "Second Municipal District, 5600 Old Orchard Road, Skokie" }
+      % elif cook_district == "17":
+      ${ "Third Municipal District, 2121 Euclid Avenue, Rolling Meadows" }
+      % elif cook_district == "18":
+      ${ "Fourth Municipal District, 1500 Maybrook Drive, Maywood" }
+      % elif cook_district == "19":
+      ${ "Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview" }
+      % elif cook_district == "20":
+      ${ "Sixth Municipal District, 16501 South Kedzie Parkway, Markham" }
+      % endif      
+    show if: trial_court_index == -1  
+
+
       
   - Edit: has_court_date
     button: |
@@ -3655,10 +3804,30 @@ review:
       % endif
     show if: child.age_in_years() >= 14 and child.agrees == False and child.knows_delivery_method
     
-  - Edit: filing_county
+  - Edit: 
+      - trial_court_index
+      - recompute:
+        - trial_court
     button: |
       **County where you will file the petition:**
-      ${ filing_county }
+      ${ trial_court.address.county }
+  - Edit: cook_district
+    button: |
+      **Cook County courthouse:**
+      % if cook_district == "15":
+      ${ "Daley Center, 50 W. Washington Street, Chicago" }
+      % elif cook_district == "16":
+      ${ "Second Municipal District, 5600 Old Orchard Road, Skokie" }
+      % elif cook_district == "17":
+      ${ "Third Municipal District, 2121 Euclid Avenue, Rolling Meadows" }
+      % elif cook_district == "18":
+      ${ "Fourth Municipal District, 1500 Maybrook Drive, Maywood" }
+      % elif cook_district == "19":
+      ${ "Fifth Municipal District, 10220 S. 76th Avenue, Bridgeview" }
+      % elif cook_district == "20":
+      ${ "Sixth Municipal District, 16501 South Kedzie Parkway, Markham" }
+      % endif      
+    show if: trial_court_index == -1  
       
   - Edit: has_court_date
     button: |
