@@ -81,7 +81,8 @@ code: |
   notice_intro
   if has_legal_parent:
     parents.gather()
-    
+  parent_child_same_address_check
+  
   if other_case_involving_parents:
     other_cases.gather()
   if caregivers.there_are_any:
@@ -551,9 +552,31 @@ fields:
     default: IL
   - ZIP code: parents[i].address.zip
     required: False
+  - "${parents[i].name_full()} lives at ${child.address.on_one_line(bare=True)} with ${child.name_full()}.": parents[i].lives_with_child
+    datatype: yesno
+    disable others: True
   - "I don't know ${parents[i].name_full()}'s address.": parents[i].address.unknown
     datatype: yesno
     disable others: True
+---
+reconsider: True
+code: |
+  if has_legal_parent:
+    if parents[0].lives_with_child:
+      parents[0].address.address = child.address.address
+      parents[0].address.unit = child.address.unit
+      parents[0].address.city = child.address.city
+      parents[0].address.state = child.address.state
+      parents[0].address.zip = child.address.zip
+  	if parents.number() > 1:
+      if parents[1].lives_with_child:
+        parents[1].address.address = child.address.address
+        parents[1].address.unit = child.address.unit
+        parents[1].address.city = child.address.city
+        parents[1].address.state = child.address.state
+        parents[1].address.zip = child.address.zip
+
+  parent_child_same_address_check = True
 ---
 id: info about parents
 question: |
@@ -733,9 +756,34 @@ question: |
   Are there any adults that live with ${ child.name_full()}?
 subquestion: | 
   These would be adults that live with ${ child.name_full()} at ${ child.address.on_one_line(bare=True)}.
+
+  % if parent_lives_with_child():
+  You already told us about:
+
+  % if parents[0].lives_with_child:
+  * ${ parents[0].name_full()}
+  % endif
+  % if parents.number() > 1:
+  % if parents[1].lives_with_child:
+  * ${ parents[0].name_full()}
+  % endif
+  % endif
+  % endif  
 fields:
   - "Any adults live with ${ child.name_full()}?": caregivers.there_are_any
     datatype: yesnoradio
+---
+code: |
+  def parent_lives_with_child():
+  
+    if has_legal_parent:
+      if parents[0].lives_with_child:
+  	    return True
+    	if parents.number() > 1:
+          if parents[1].lives_with_child:
+    	      return True
+    return False
+
 
 ---
 code: |
@@ -759,17 +807,25 @@ question: |
   Who is another adult that lives with ${child.name_full()}?  
   % endif
 subquestion: |
-  % if i>0:
+  % if i>0 or parent_lives_with_child():
   So far you have told us about:
-  
+
+  % if parent_lives_with_child():
+  % if parents[0].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % if parents.number() > 1:
+  % if parents[1].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % endif
+  % endif    
   % for x in range(caregivers.number_gathered() - 1):
   * ${caregivers[x].name_full()}, ${caregivers[x].relationship}
   % endfor  
 
   % endif
   You can include up to four adults that live with ${child.name_full()} at ${child.address.on_one_line(bare=True)}.
-
-  **Note:** Be sure to list ${child.name_full()}'s parents, if any of them live with their child.
 fields:
   - code: |
       caregivers[i].name_fields()
@@ -789,10 +845,20 @@ question: |
 subquestion: |
   So far you have told us about:
 
+  % if parent_lives_with_child():
+  % if parents[0].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % if parents.number() > 1:
+  % if parents[1].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % endif
+  % endif    
   % for caregiver in caregivers:
   * ${caregiver.name_full()}, ${caregiver.relationship}
-  % endfor  
-
+  % endfor 
+  
   The forms have room for up to four adults that live with ${child.name_full()} at ${child.address.on_one_line(bare=True)}.
 
   **Note:** Be sure to list ${child.name_full()}'s parents, if any of them live with their child.  
@@ -801,7 +867,20 @@ fields:
     datatype: yesnoradio
 ---
 code: |
-  if caregivers.number_gathered() >= 4:
+  def number_parents_live_with_child():
+    total_parents = 0
+  
+    if has_legal_parent:
+      if parents[0].lives_with_child:
+  	    total_parents += 1
+    	if parents.number() > 1:
+          if parents[1].lives_with_child:
+    	      total_parents += 1
+    return total_parents
+
+---
+code: |  
+  if caregivers.number_gathered() >= (4 - number_parents_live_with_child() ):
     caregivers.there_is_another = False
 ---
 id: is minor married
@@ -1586,16 +1665,18 @@ code: |
 id: notice relationship
 generic object: ALPeopleList
 question: |
-  What is ${x[i].name_full()}'s relationship to ${ child.name_full()}?
+  Choose a relationship for Notice
 subquestion: |
-  The Notice court forms ask for different information than the *${ form_name}*. Some of this might be repetitive.
+  The Notice court forms ask for different information than the *${ form_name}*.
+
+  You told us that ${x[i].name_full()} is ${ child.name_full()}'s ${x[i].relationship}. Pick the option that fits.
 fields:
   - "${x[i].name_full()} is": x[i].notice_relationship
     input type: radio
     choices: 
-      - "${ child.name_full()}'s sibling who is at least 18 years old": sibling
-      - "Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}": custody
-      - "A person with a different relationship to ${ child.name_full() }": other
+      - "${ child.name_full()}'s **sibling** who is at least 18 years old": sibling
+      - "Some **other adult**, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}": custody
+      - "A person with a **different relationship** to ${ child.name_full() }": other
   - "Other relationship": x[i].other_notice_relationship
     maxlength: 40
     show if:
@@ -3597,6 +3678,8 @@ review:
       **Current address:**
       % if x.address.unknown:
       Unknown
+      % elif x.lives_with_child:
+      ${ child.address.on_one_line(bare=True) }
       % else:
       ${ x.address.on_one_line(bare=True) }
       % endif
