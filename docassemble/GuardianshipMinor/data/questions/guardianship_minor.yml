@@ -783,8 +783,6 @@ code: |
           if parents[1].lives_with_child:
     	      return True
     return False
-
-
 ---
 code: |
   caregivers[i].name.first
@@ -834,10 +832,16 @@ id: caregiver relationship
 question: |
   What is ${caregivers[i].name_full()}'s relationship to ${child.name_full()}?
 subquestion: |
-  You can enter things like parent, brother, sister, aunt, uncle, grandparent, cousin, short-term guardian, etc.
+  Examples include: sister, brother, aunt, uncle, grandparent, or cousin.
+  
+  You can also enter things like Short-term guardian, or a relative's friend or parnter.
 fields:
   - "Relationship to ${child.name_full()}": caregivers[i].relationship
     maxlength: 25
+  - "Are they related to to ${child.name_full()} through blood or marriage?": caregivers[i].is_family
+    datatype: yesnowide
+  - "Are they ${child.name_full()}'s short-term guardian?": caregivers[i].is_stg
+    datatype: yesnowide
 ---
 id: any other caregivers
 question: |  
@@ -879,7 +883,7 @@ code: |
     return total_parents
 
 ---
-code: |  
+code: |
   if caregivers.number_gathered() >= (4 - number_parents_live_with_child() ):
     caregivers.there_is_another = False
 ---
@@ -928,12 +932,25 @@ id: any adult relatives
 question: |  
   ${child.name_full()}'s adult relatives
 subquestion: |
-  % if caregivers.there_are_any:
+  % if caregivers.there_are_any or parent_lives_with_child():
   So far you have told us about these adults that live with ${child.name_full()}: 
 
+  % if parent_lives_with_child():
+  % if parents[0].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % if parents.number() > 1:
+  % if parents[1].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % endif
+  % endif    
   % for person in caregivers:
+  % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
+  % endif    
   % endfor
+  
   % endif
 
   <div class="alert alert-info ilao-info" role="alert">
@@ -973,11 +990,23 @@ question: |
   Who is another adult relative of ${child.name_full()}?
   % endif
 subquestion: |
-  % if caregivers.there_are_any or adult_relatives.there_are_any:
+  % if caregivers.there_are_any or adult_relatives.there_are_any or parent_lives_with_child():
   So far you told us about:
 
+  % if parent_lives_with_child():
+  % if parents[0].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % if parents.number() > 1:
+  % if parents[1].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % endif
+  % endif    
   % for person in caregivers:
+  % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
+  % endif
   % endfor
   % for x in range(adult_relatives.number() - 1):
   * ${adult_relatives[x].name_full()}, ${adult_relatives[x].relationship}
@@ -986,7 +1015,7 @@ subquestion: |
 
   **Important:**
 
-  * Include ${child.name_full()}'s **parents**, adult brothers and sisters, and short-term guardian, if any.
+  * Include ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.
   * If ${child.name_full()} has none of those relatives or a short-term guardian, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).
 fields:
   - code: |
@@ -1024,8 +1053,20 @@ question: |
 subquestion: |
   So far you have told us about:
 
+  % if parent_lives_with_child():
+  % if parents[0].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % if parents.number() > 1:
+  % if parents[1].lives_with_child:
+  * ${ parents[0].name_full()}, Parent
+  % endif
+  % endif
+  % endif
   % for person in caregivers:
+  % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
+  % endif
   % endfor
   % for adult in adult_relatives:
   * ${adult.name_full()}, ${adult.relationship}
@@ -1042,7 +1083,17 @@ fields:
     datatype: yesnoradio
 ---
 code: |
-  if adult_relatives.number_gathered() >= ( 10-caregivers.number() ):
+  def number_caregivers_family_or_stg():
+
+    total = 0
+    for person in caregivers:
+      if person.is_family or person.is_stg:
+        total += 1
+    return total
+
+---
+code: |  
+  if adult_relatives.number_gathered() >= (10 - number_parents_live_with_child() - number_caregivers_family_or_stg()):
     adult_relatives.there_is_another = False
 ---
 code: |
@@ -1056,6 +1107,11 @@ code: |
     if minor_is_married:
       temp_list.append(spouse)
     else:
+
+      if has_legal_parent:
+        temp_list.append(parents[0])
+      	if parents.number() > 1:
+          temp_list.append(parents[1]) 
       if caregivers.there_are_any:
         for caregiver in caregivers:
           temp_list.append(caregiver)    	  
@@ -1107,9 +1163,16 @@ code: |
   if minor_is_married:
     temp_list.append(spouse)
   else:
+    if has_legal_parent:
+      if not parents[0].is_dead:
+        temp_list.append(parents[0])
+    	if parents.number() > 1:
+        if not parents[1].is_dead:
+          temp_list.append(parents[1]) 
     if caregivers.there_are_any:
       for caregiver in caregivers:
-        temp_list.append(caregiver)    	  
+        if caregiver.is_family or caregiver.is_stg:
+          temp_list.append(caregiver)    	  
     if adult_relatives.there_are_any:
       for x in range(adult_relatives.number() - 1):
         temp_list.append(adult_relatives[x])
@@ -1127,9 +1190,14 @@ code: |
   if minor_is_married:
     temp_list.append(spouse)
   else:
+    if has_legal_parent:
+      temp_list.append(parents[0])
+    	if parents.number() > 1:
+        temp_list.append(parents[1]) 
     if caregivers.there_are_any:
       for caregiver in caregivers:
-        temp_list.append(caregiver)    	  
+        if caregiver.is_family or caregiver.is_stg:
+          temp_list.append(caregiver)    	  
     if adult_relatives.there_are_any:
       for x in range(adult_relatives.number() - 1):
         temp_list.append(adult_relatives[x])
@@ -3554,7 +3622,7 @@ question: |
 subquestion: |  
   ${ caregivers.table }
 
-  % if caregivers.number_gathered() < 4:
+  % if caregivers.number_gathered() < (4 - number_parents_live_with_child() ):
   ${ caregivers.add_action() }
   % endif
 ---
@@ -3585,6 +3653,14 @@ review:
     button: |
       **Relationship to ${child.name_full()}:**
       ${ x.relationship }
+  - Edit: x.is_family
+    button: |
+      **Related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(x.is_family))}
+  - Edit: x.is_stg
+    button: |
+      **Is ${ x.name_full()  } the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(x.is_stg))}
   - Edit: x.notice_relationship
     button: |
       **For notice purposes, ${x.name_full()} is:**
@@ -3746,7 +3822,7 @@ question: |
 subquestion: |  
   ${ adult_relatives.table }
 
-  % if adult_relatives.number_gathered() < ( 10-caregivers.number() ):
+  % if adult_relatives.number_gathered() < (10 - number_parents_live_with_child() - number_caregivers_family_or_stg()):
   ${ adult_relatives.add_action() }
   % endif
 ---
