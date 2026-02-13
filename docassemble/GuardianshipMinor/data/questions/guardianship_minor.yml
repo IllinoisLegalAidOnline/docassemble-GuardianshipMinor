@@ -539,25 +539,52 @@ fields:
 ---
 id: parent address
 question: |
-  What is ${parents[i].name_full()}'s current address?
+  ${parents[i].name_full()}'s current address
 fields:
+  - "Do you know ${parents[i].name_full()}'s address?": parents[i].address.unknown
+    datatype: noyesradio
+  - note: |
+      What is ${parents[i].name_full()}'s current address?
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - "${parents[i].name_full()} lives with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**.": parents[i].lives_with_child
+    datatype: yesnowide
+    disable others: 
+      - parents[i].address.address
+      - parents[i].address.unit
+      - parents[i].address.city
+      - parents[i].address.state
+      - parents[i].address.zip
+    show if:
+      variable: parents[i].address.unknown
+      is: False
   - Street address: parents[i].address.address
     address autocomplete: True
+    show if:
+      variable: parents[i].address.unknown
+      is: False
   - Address line 2: parents[i].address.unit
     required: False
+    show if:
+      variable: parents[i].address.unknown
+      is: False
   - City: parents[i].address.city
+    show if:
+      variable: parents[i].address.unknown
+      is: False
   - State: parents[i].address.state
     code: |
       states_list()
     default: IL
+    show if:
+      variable: parents[i].address.unknown
+      is: False
   - ZIP code: parents[i].address.zip
     required: False
-  - "${parents[i].name_full()} lives at ${child.address.on_one_line(bare=True)} with ${child.name_full()}.": parents[i].lives_with_child
-    datatype: yesno
-    disable others: True
-  - "I don't know ${parents[i].name_full()}'s address.": parents[i].address.unknown
-    datatype: yesno
-    disable others: True
+    show if:
+      variable: parents[i].address.unknown
+      is: False
 ---
 reconsider: True
 code: |
@@ -568,7 +595,7 @@ code: |
       parents[0].address.city = child.address.city
       parents[0].address.state = child.address.state
       parents[0].address.zip = child.address.zip
-  	if parents.number() > 1:
+  	if parents.number_gathered() > 1:
       if parents[1].lives_with_child:
         parents[1].address.address = child.address.address
         parents[1].address.unit = child.address.unit
@@ -615,7 +642,7 @@ fields:
   - "${parents[i].name_full()} is unable or unwilling to take care of ${child.name_full()}.": parents[i].unable
     datatype: yesnowide
 ---
-id: any legal parents
+id: another legal parent
 question: |
   Does ${child.name_full()} have another legal parent?
 subquestion: |
@@ -632,7 +659,7 @@ subquestion: |
   
   **Note:** You do not need to include parents who have had their parental rights terminated by a court.
 fields:
-  - Does ${child.name_full()} have another legal parent?": parents.there_is_another
+  - "Does ${child.name_full()} have another legal parent?": parents.there_is_another
     datatype: yesnoradio
 ---
 template: parental_notice_help
