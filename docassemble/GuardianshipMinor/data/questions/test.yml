@@ -1,0 +1,126 @@
+metadata:
+  title: TEST
+  short title: TEST
+  comment: This program helps you ask the court to become a legal guardian of a minor.
+  authors:
+    - Matt Newsted
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ILAO:ilao-interview-framework.yml
+  - docassemble.ILAO:shared-basic-questions.yml
+---
+objects:
+  - users: ALPeopleList.using(there_are_any=True)
+  - child: ALIndividual
+  - parents: ALPeopleList.using(complete_attribute='complete')
+  - parents[i].jail_delivery_address: ALAddress
+---
+code: |
+  al_form_type = 'starts_case'
+  ilao_easy_form_title = "Guardianship of a minor"
+  ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/guardianship-minor"
+  form_name = "Petition for Guardianship of a Minor"
+  github_user = 'IllinoisLegalAidOnline'
+  github_repo_name = 'docassemble-GuardianshipMinor'
+  allowed_courts = ['Circuit']
+---
+# interview order block
+mandatory: True
+code: |
+  child.name.first
+
+  if parents.there_are_any:
+    parents.gather()
+  
+  forms_assembling
+---
+id: any legal parents
+question: |
+  Does ${child.name_full()} have at least one legal parent?
+subquestion: |
+  Legal parents are entitled to notice if someone is asking a court to become a guardian of their child.
+  
+  You must list each of ${child.name_full()}'s parents on the *${ form_name }*, even if the parent:
+  
+  * Has died,
+  * Gave up physical custody of ${child.name_full()},
+  * Cannot be located, or
+  * Is unable or unwilling to take care of ${child.name_full()}.
+
+  **Note:**  Do not include parents who have had their parental rights terminated by a court.
+fields:
+  - "Does ${child.name_full()} have at least one legal parent?": parents.there_are_any
+    datatype: yesnoradio
+---
+code: |
+  parents[i].name.first
+  parents[i].complete = True
+---
+id: names of parents
+sets:
+  - parents[i].name.first
+  - parents[i].name.last
+  - parents[i].name.middle
+  - parents[i].name.suffix
+question: |
+  % if i == 0:
+  Name of ${child.name_full()}'s parent
+  % else:
+  Name of ${child.name_full()}'s second parent
+  % endif
+subquestion: |
+  You may be able to find this on ${child.name_full()}'s birth certificate or other official records, if you have them.
+fields:
+  - code: |
+      parents[i].name_fields()
+---
+---
+id: another legal parent
+question: |
+  Does ${child.name_full()} have another legal parent?
+subquestion: |
+  You already entered information about ${parents[0].name_full()}.
+  
+  There might not be another legal parent if:
+
+  * No other parent is listed on the birth certificate,
+  * There is no Voluntary Acknowledgment of Paternity/Parentage,
+  * The parents were not married at the time the child was born, and
+  * Parentage has not been decided by a court or administrative agency.
+
+  ${ collapse_template(parental_notice_help) }
+  
+  **Note:** You do not need to include parents who have had their parental rights terminated by a court.
+fields:
+  - "Does ${child.name_full()} have another legal parent?": parents.there_is_another
+    datatype: yesnoradio
+---
+template: parental_notice_help
+subject: |
+  **Remind me why parents must be included**
+content: |  
+  Legal parents are entitled to notice if someone is asking a court to become a guardian of their child.
+  
+  You must list each of ${child.name_full()}'s parents on the *${ form_name }*, even if the parent:
+  
+  * Has died,
+  * Gave up physical custody of ${child.name_full()},
+  * Cannot be located, or
+  * Is unable or unwilling to take care of ${child.name_full()}.
+---
+code: |
+  if parents.number_gathered() >= 2:
+    parents.there_is_another = False
+---
+id: forms assembling
+continue button field: forms_assembling
+question: |
+  Almost done
+subquestion: |
+  After you click **Next**, it may take a few moments to finish making your forms.
+  
+  ###### You do not need to refresh your screen. Hang in there!
+  
+  [NEWLINE]
+---
