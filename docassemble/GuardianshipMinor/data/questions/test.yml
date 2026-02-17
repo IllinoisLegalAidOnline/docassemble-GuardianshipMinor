@@ -29,11 +29,33 @@ code: |
 mandatory: True
 code: |
   child.name.first
+  child.address.state
 
   if parents.there_are_any:
     parents.gather()
   
   forms_assembling
+---
+id: child address
+question: |
+  What is ${child.name_full()}'s current address?
+subquestion: |
+  **Note:** This address will appear on your court papers.
+fields:
+  - Street address: child.address.address
+    address autocomplete: True
+  - Address line 2: child.address.unit
+    required: False
+  - City: child.address.city
+  - State: child.address.state
+    code: |
+      states_list()
+    default: IL
+  - ZIP code: child.address.zip
+    required: False
+---
+code: |
+  child.address.unknown = False
 ---
 id: any legal parents
 question: |
@@ -55,6 +77,15 @@ fields:
 ---
 code: |
   parents[i].name.first
+  parents[i].relationship = "parent"
+  if parents[i].agrees:
+    parents[i].consent_info
+  if parents[i].not_found or parents[i].is_dead:
+    parents[i].address.unknown = True
+  else:
+    if parents[i].address.unknown:
+      parents[i].notice_by_publication  
+    parents[i].notice_relationship = "parent"  
   parents[i].complete = True
 ---
 id: names of parents
@@ -75,6 +106,92 @@ fields:
   - code: |
       parents[i].name_fields()
 ---
+id: parent address
+question: |
+  ${parents[i].name_full()}'s current address
+fields:
+  - "Do you know ${parents[i].name_full()}'s address?": parents[i].address.unknown
+    datatype: noyesradio
+  - note: |
+      What is ${parents[i].name_full()}'s current address?
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - "${parents[i].name_full()} lives with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**.": parents[i].lives_with_child
+    datatype: yesnowide
+    disable others: 
+      - parents[i].address.address
+      - parents[i].address.unit
+      - parents[i].address.city
+      - parents[i].address.state
+      - parents[i].address.zip
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - Street address: parents[i].address.address
+    address autocomplete: True
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - Address line 2: parents[i].address.unit
+    required: False
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - City: parents[i].address.city
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - State: parents[i].address.state
+    code: |
+      states_list()
+    default: IL
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+  - ZIP code: parents[i].address.zip
+    required: False
+    show if:
+      variable: parents[i].address.unknown
+      is: False
+---
+id: info about parents
+question: |
+  Information about ${parents[i].name_full()}
+subquestion: |
+  Enter information about ${parents[i].name_full()}. Check all that apply.
+fields:
+  - "${parents[i].name_full()} agrees to the guardianship. They will have to sign a *Consent to Guardianship of Minor and Appearance* or give consent in court.": parents[i].agrees
+    datatype: yesnowide
+  - "${parents[i].name_full()} has died.": parents[i].is_dead
+    datatype: yesnowide
+  - "When did ${parents[i].name_full()} die?": parents[i].decease_date
+    datatype: date
+    max: ${today()}
+    show if:
+      variable: parents[i].is_dead
+      is: True
+  - note: |
+      You may need to provide the court with a copy of ${parents[i].name_full()}'s death certificate.
+    show if:
+      variable: parents[i].is_dead
+      is: True      
+  - "${parents[i].name_full()} voluntarily gave up custody of ${child.name_full()}.": parents[i].gave_up_custody
+    datatype: yesnowide
+  - "${parents[i].name_full()} cannot be found.": parents[i].not_found
+    datatype: yesnowide
+  - "**When** was ${parents[i].name_full()}'s last contact with ${child.name_full()}?": parents[i].last_contact_date
+    datatype: date
+    show if:
+      variable: parents[i].not_found
+      is: True
+  - "**Where** was ${parents[i].name_full()}'s last contact with ${child.name_full()}?": parents[i].last_contact_location
+    maxlength: 50
+    show if:
+      variable: parents[i].not_found
+      is: True
+  - "${parents[i].name_full()} is unable or unwilling to take care of ${child.name_full()}.": parents[i].unable
+    datatype: yesnowide
 ---
 id: another legal parent
 question: |
@@ -112,6 +229,34 @@ content: |
 code: |
   if parents.number_gathered() >= 2:
     parents.there_is_another = False
+---
+id: consent info
+generic object: ALIndividual
+continue button field: x.consent_info
+question: |
+  Consent and Appearance form information
+subquestion: |
+  Since you said that ${x.name_full() } agrees to the guardianship, they will have to sign a CONSENT and APPEARANCE form that you file with your Petition. Alternatively, they can give their consent in court.
+
+  UPDATE: The Consent & Appearance must be signed in front of a notary public, filed
+
+  **Note:** Be sure that they agree. If they do not agree and file a CONSENT, you will have to give them notice of the guardianship some other way.  
+
+  You can download the form at the end of this program.
+---
+id: notice options for unknown address
+generic object: ALIndividual
+question: |
+  Notice by publication
+subquestion: |
+  If you do not know ${x.name_full()}'s address now, you an add it to your forms later. They must receive notice of the guardianship at least **7 days** before the court hearing.
+  
+  If you cannot find ${x.name_full()}'s address, you will have to give them notice of the guardianship by publishing in a newspaper.
+
+  EXPLAIN You will need to show the judge that you tried to find them by filling out a STATEMENT.
+
+  EXPLAIN To give notice by newspaper, the process is X, Y, Z and must run for # of weeks.
+continue button field: x.notice_by_publication
 ---
 id: forms assembling
 continue button field: forms_assembling

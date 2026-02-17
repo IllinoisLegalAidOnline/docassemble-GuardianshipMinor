@@ -81,6 +81,7 @@ code: |
   notice_intro
   if parents.there_are_any:
     parents.gather()
+  temp_debug
   parent_child_same_address_check
   
   if other_case_involving_parents:
@@ -505,18 +506,6 @@ fields:
 ---
 code: |
   parents[i].name.first
-  parents[i].relationship = "parent"
-  if parents[i].agrees:
-    parents[i].consent_info
-  if parents[i].not_found or parents[i].is_dead:
-    parents[i].address.unknown = True
-  else:
-    if parents[i].address.unknown:
-      parents[i].notice_by_publication  
-    parents[i].notice_relationship = "parent"
-    if parents[i].knows_delivery_method:
-      parents[i].hand_delivery
-      parents[i].delivery_date
   parents[i].complete = True
 ---
 id: names of parents
@@ -586,25 +575,6 @@ fields:
       variable: parents[i].address.unknown
       is: False
 ---
-reconsider: True
-code: |
-  if parents.there_are_any:
-    if parents[0].lives_with_child:
-      parents[0].address.address = child.address.address
-      parents[0].address.unit = child.address.unit
-      parents[0].address.city = child.address.city
-      parents[0].address.state = child.address.state
-      parents[0].address.zip = child.address.zip
-  	if parents.number_gathered() > 1:
-      if parents[1].lives_with_child:
-        parents[1].address.address = child.address.address
-        parents[1].address.unit = child.address.unit
-        parents[1].address.city = child.address.city
-        parents[1].address.state = child.address.state
-        parents[1].address.zip = child.address.zip
-
-  parent_child_same_address_check = True
----
 id: info about parents
 question: |
   Information about ${parents[i].name_full()}
@@ -632,6 +602,7 @@ fields:
     datatype: yesnowide
   - "**When** was ${parents[i].name_full()}'s last contact with ${child.name_full()}?": parents[i].last_contact_date
     datatype: date
+    max: ${today()}
     show if:
       variable: parents[i].not_found
       is: True
@@ -679,6 +650,32 @@ content: |
 code: |
   if parents.number_gathered() >= 2:
     parents.there_is_another = False
+---
+id: temp debug
+continue button field: temp_debug
+question: |
+  We made it out of the gather loop
+---
+reconsider: True
+code: |
+  if parents.there_are_any:
+    if not parents[0].address.unknown:
+      if parents[0].lives_with_child:
+        parents[0].address.address = child.address.address
+        parents[0].address.unit = child.address.unit
+        parents[0].address.city = child.address.city
+        parents[0].address.state = child.address.state
+        parents[0].address.zip = child.address.zip
+    	if parents.number_gathered() > 1:
+        if not parents[1].address.unknown:
+          if parents[1].lives_with_child:
+            parents[1].address.address = child.address.address
+            parents[1].address.unit = child.address.unit
+            parents[1].address.city = child.address.city
+            parents[1].address.state = child.address.state
+            parents[1].address.zip = child.address.zip
+
+  parent_child_same_address_check = True
 ---
 id: another court case that involves parents
 question: |
@@ -788,12 +785,16 @@ subquestion: |
   % if parent_lives_with_child():
   You already told us about:
 
+  % if not parents[0].address.unknown:
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}
   % endif
+  % endif
   % if parents.number() > 1:
+  % if not parents[1].address.unknown:
   % if parents[1].lives_with_child:
-  * ${ parents[0].name_full()}
+  * ${ parents[1].name_full()}
+  % endif
   % endif
   % endif
   % endif  
@@ -805,9 +806,11 @@ code: |
   def parent_lives_with_child():
   
     if parents.there_are_any:
-      if parents[0].lives_with_child:
-  	    return True
+      if not parents[0].address.unknown:
+        if parents[0].lives_with_child:
+    	    return True
     	if parents.number() > 1:
+        if not parents[1].address.unknown:
           if parents[1].lives_with_child:
     	      return True
     return False
@@ -836,13 +839,17 @@ subquestion: |
   % if i>0 or parent_lives_with_child():
   So far you have told us about:
 
+  % if not parents[0].address.unknown:
   % if parent_lives_with_child():
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
+  % endif
   % if parents.number() > 1:
+  % if not parents[1].address.unknown:
   % if parents[1].lives_with_child:
-  * ${ parents[0].name_full()}, Parent
+  * ${ parents[1].name_full()}, Parent
+  % endif
   % endif
   % endif
   % endif    
@@ -877,13 +884,17 @@ question: |
 subquestion: |
   So far you have told us about:
 
+  % if not parents[0].address.unknown:  
   % if parent_lives_with_child():
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
+  % endif
   % if parents.number() > 1:
+  % if not parents[1].address.unknown:  
   % if parents[1].lives_with_child:
-  * ${ parents[0].name_full()}, Parent
+  * ${ parents[1].name_full()}, Parent
+  % endif
   % endif
   % endif
   % endif    
@@ -903,11 +914,13 @@ code: |
     total_parents = 0
   
     if parents.there_are_any:
-      if parents[0].lives_with_child:
-  	    total_parents += 1
+      if not parents[0].address.unknown:  
+        if parents[0].lives_with_child:
+    	    total_parents += 1
     	if parents.number() > 1:
-          if parents[1].lives_with_child:
-    	      total_parents += 1
+        if not parents[1].address.unknown:  
+            if parents[1].lives_with_child:
+      	      total_parents += 1
     return total_parents
 
 ---
@@ -964,15 +977,19 @@ subquestion: |
   So far you have told us about these adults that live with ${child.name_full()}: 
 
   % if parent_lives_with_child():
+  % if not parents[0].address.unknown:  
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
+  % endif
   % if parents.number() > 1:
+  % if not parents[1].address.unknown:  
   % if parents[1].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
   % endif
-  % endif    
+  % endif
+  % endif
   % for person in caregivers:
   % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
@@ -1022,12 +1039,16 @@ subquestion: |
   So far you told us about:
 
   % if parent_lives_with_child():
+  % if not parents[0].address.unknown:  
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
+  % endif
   % if parents.number() > 1:
+  % if not parents[1].address.unknown:  
   % if parents[1].lives_with_child:
   * ${ parents[0].name_full()}, Parent
+  % endif
   % endif
   % endif
   % endif    
@@ -1082,12 +1103,16 @@ subquestion: |
   So far you have told us about:
 
   % if parent_lives_with_child():
+  % if not parents[0].address.unknown:    
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
+  % endif
   % if parents.number() > 1:
+  % if not parents[1].address.unknown:  
   % if parents[1].lives_with_child:
   * ${ parents[0].name_full()}, Parent
+  % endif
   % endif
   % endif
   % endif
