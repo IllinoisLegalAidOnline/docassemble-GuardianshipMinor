@@ -67,7 +67,7 @@ code: |
     child_too_old
   if child.address.state != 'IL':
     child_outside_illinois
-    child.address.unknown = False
+    child.address.known = True
   
   previous_standby
   current_stg
@@ -86,10 +86,12 @@ code: |
     if parents[0].agrees:
       parents[0].consent_info
     if parents[0].not_found or parents[0].is_dead:
-      parents[0].address.unknown = True
+      parents[0].address.known = False
     else:
-      if parents[0].address.unknown:
-        parents[0].notice_by_publication  
+      if parents[0].address.known:
+        parents[0].address.address
+      else:
+        parents[0].notice_by_publication
       parents[0].notice_relationship = "parent"  
       if parents[0].knows_delivery_method:
         parents[0].hand_delivery
@@ -101,9 +103,11 @@ code: |
       if parents[1].agrees:
         parents[1].consent_info
       if parents[1].not_found or parents[1].is_dead:
-        parents[1].address.unknown = True
+        parents[1].address.known = False
       else:
-        if parents[1].address.unknown:
+        if parents[1].address.known:
+          parents[1].address.address
+        else:
           parents[1].notice_by_publication  
         parents[1].notice_relationship = "parent"  
       if parents[1].knows_delivery_method:
@@ -119,9 +123,9 @@ code: |
   if minor_is_married:
     spouse.name.first
     spouse.relationship = "Spouse"
-    spouse.address.unknown
+    spouse.address.known
     spouse.agrees
-    if spouse.address.unknown:
+    if not spouse.address.known:
       spouse.notice_by_publication
     spouse.notice_relationship = "Spouse"
     if spouse.knows_delivery_method:
@@ -180,7 +184,7 @@ code: |
   
   if child.age_in_years() >= 14:
     child.agrees
-    if child.address.unknown:
+    if not child.address.known:
       child.notice_by_publication
     child.notice_relationship = "minor"
     if child.knows_delivery_method:
@@ -390,7 +394,7 @@ fields:
     required: False
 ---
 code: |
-  child.address.unknown = False
+  child.address.known = True
 ---
 id: child outside illinois kick out
 event: child_outside_illinois
@@ -559,54 +563,32 @@ fields:
   - code: |
       parents[i].name_fields()
 ---
-id: parent address
+id: know parent address
 question: |
   ${parents[i].name_full()}'s current address
 fields:
-  - "Do you know ${parents[i].name_full()}'s address?": parents[i].address.unknown
-    datatype: noyesradio
-  - note: |
-      What is ${parents[i].name_full()}'s current address?
+  - "Do you know ${parents[i].name_full()}'s address?": parents[i].address.known
+    datatype: yesnoradio
+  - "Does ${parents[i].name_full()} live with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**?": parents[i].lives_with_child
+    datatype: yesnoradio
     show if:
-      variable: parents[i].address.unknown
-      is: False
-  - "${parents[i].name_full()} lives with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**.": parents[i].lives_with_child
-    datatype: yesnowide
-    disable others: 
-      - parents[i].address.address
-      - parents[i].address.unit
-      - parents[i].address.city
-      - parents[i].address.state
-      - parents[i].address.zip
-    show if:
-      variable: parents[i].address.unknown
-      is: False
+      variable: parents[i].address.known
+      is: True
+---
+id: parent address
+question: |
+  What is ${parents[i].name_full()}'s current address?
+fields:
   - Street address: parents[i].address.address
     address autocomplete: True
-    show if:
-      variable: parents[i].address.unknown
-      is: False
   - Address line 2: parents[i].address.unit
     required: False
-    show if:
-      variable: parents[i].address.unknown
-      is: False
   - City: parents[i].address.city
-    show if:
-      variable: parents[i].address.unknown
-      is: False
   - State: parents[i].address.state
     code: |
       states_list()
-    default: IL
-    show if:
-      variable: parents[i].address.unknown
-      is: False
   - ZIP code: parents[i].address.zip
     required: False
-    show if:
-      variable: parents[i].address.unknown
-      is: False
 ---
 id: info about parents
 question: |
@@ -687,7 +669,7 @@ content: |
 reconsider: True
 code: |
   if has_legal_parent:
-    if not parents[0].address.unknown:
+    if parents[0].address.known:
       if parents[0].lives_with_child:
         parents[0].address.address = child.address.address
         parents[0].address.unit = child.address.unit
@@ -695,7 +677,7 @@ code: |
         parents[0].address.state = child.address.state
         parents[0].address.zip = child.address.zip
     	if has_second_parent:
-        if not parents[1].address.unknown:
+        if parents[1].address.known:
           if parents[1].lives_with_child:
             parents[1].address.address = child.address.address
             parents[1].address.unit = child.address.unit
@@ -813,13 +795,13 @@ subquestion: |
   % if parent_lives_with_child():
   You already told us about:
 
-  % if not parents[0].address.unknown:
+  % if parents[0].address.known:
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}
   % endif
   % endif
   % if has_second_parent:
-  % if not parents[1].address.unknown:
+  % if parents[1].address.known:
   % if parents[1].lives_with_child:
   * ${ parents[1].name_full()}
   % endif
@@ -834,11 +816,11 @@ code: |
   def parent_lives_with_child():
   
     if has_legal_parent:
-      if not parents[0].address.unknown:
+      if  parents[0].address.known:
         if parents[0].lives_with_child:
     	    return True
     	if has_second_parent:
-        if not parents[1].address.unknown:
+        if parents[1].address.known:
           if parents[1].lives_with_child:
     	      return True
     return False
@@ -846,7 +828,7 @@ code: |
 code: |
   caregivers[i].name.first
   caregivers[i].relationship
-  caregivers[i].address.unknown = False
+  caregivers[i].address.known = True
   caregivers[i].agrees
   caregivers[i].notice_relationship
   if caregivers[i].knows_delivery_method:
@@ -867,14 +849,14 @@ subquestion: |
   % if i>0 or parent_lives_with_child():
   So far you have told us about:
 
-  % if not parents[0].address.unknown:
+  % if parents[0].address.known:
   % if parent_lives_with_child():
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
   % endif
   % if has_second_parent:
-  % if not parents[1].address.unknown:
+  % if parents[1].address.known:
   % if parents[1].lives_with_child:
   * ${ parents[1].name_full()}, Parent
   % endif
@@ -912,14 +894,14 @@ question: |
 subquestion: |
   So far you have told us about:
 
-  % if not parents[0].address.unknown:  
+  % if  parents[0].address.known:  
   % if parent_lives_with_child():
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
   % endif
   % if has_second_parent:
-  % if not parents[1].address.unknown:  
+  % if parents[1].address.known:  
   % if parents[1].lives_with_child:
   * ${ parents[1].name_full()}, Parent
   % endif
@@ -942,11 +924,11 @@ code: |
     total_parents = 0
   
     if has_legal_parent:
-      if not parents[0].address.unknown:  
+      if parents[0].address.known:  
         if parents[0].lives_with_child:
     	    total_parents += 1
     	if has_second_parent:
-        if not parents[1].address.unknown:  
+        if parents[1].address.known:  
             if parents[1].lives_with_child:
       	      total_parents += 1
     return total_parents
@@ -989,8 +971,8 @@ fields:
     default: IL
   - ZIP code: spouse.address.zip
     required: False
-  - "I don't know ${spouse.name_full()}'s address.": spouse.address.unknown
-    datatype: yesno
+  - "I don't know ${spouse.name_full()}'s address.": spouse.address.known
+    datatype: noyes
     disable others: True
 ---
 code: |
@@ -1001,21 +983,13 @@ id: any adult relatives
 question: |  
   ${child.name_full()}'s adult relatives
 subquestion: |
-  % if caregivers.there_are_any or parent_lives_with_child():
-  So far you have told us about these adults that live with ${child.name_full()}: 
+  % if caregivers.there_are_any or has_legal_parent:
+  So far you have told us about: 
 
-  % if parent_lives_with_child():
-  % if not parents[0].address.unknown:  
-  % if parents[0].lives_with_child:
+  % if has_legal_parent:
   * ${ parents[0].name_full()}, Parent
-  % endif
-  % endif
   % if has_second_parent:
-  % if not parents[1].address.unknown:  
-  % if parents[1].lives_with_child:
   * ${ parents[1].name_full()}, Parent
-  % endif
-  % endif
   % endif
   % endif
   % for person in caregivers:
@@ -1043,9 +1017,9 @@ fields:
 code: |
   adult_relatives[i].name.first
   adult_relatives[i].relationship
-  adult_relatives[i].address.unknown
+  adult_relatives[i].address.known
   adult_relatives[i].agrees
-  if adult_relatives[i].address.unknown:
+  if adult_relatives[i].address.known:
     adult_relatives[i].notice_by_publication  
   adult_relatives[i].notice_relationship
   if adult_relatives[i].knows_delivery_method:
@@ -1063,31 +1037,24 @@ question: |
   Who is another adult relative of ${child.name_full()}?
   % endif
 subquestion: |
-  % if caregivers.there_are_any or adult_relatives.there_are_any or parent_lives_with_child():
-  So far you told us about:
+  % if caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
+  So far you have told us about: 
 
-  % if parent_lives_with_child():
-  % if not parents[0].address.unknown:  
-  % if parents[0].lives_with_child:
+  % if has_legal_parent:
   * ${ parents[0].name_full()}, Parent
-  % endif
-  % endif
   % if has_second_parent:
-  % if not parents[1].address.unknown:  
-  % if parents[1].lives_with_child:
   * ${ parents[1].name_full()}, Parent
   % endif
   % endif
-  % endif
-  % endif    
   % for person in caregivers:
   % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
-  % endif
-  % endfor
+  % endif    
   % for x in range(adult_relatives.number() - 1):
   * ${adult_relatives[x].name_full()}, ${adult_relatives[x].relationship}
   % endfor
+  % endfor
+  
   % endif
 
   **Important:**
@@ -1120,8 +1087,8 @@ fields:
     default: IL
   - ZIP code: adult_relatives[i].address.zip
     required: False
-  - "I don't know ${adult_relatives[i].name_full()}'s address.": adult_relatives[i].address.unknown
-    datatype: yesno
+  - "I don't know ${adult_relatives[i].name_full()}'s address.": adult_relatives[i].address.known
+    datatype: noyes
     disable others: True
 ---
 id: any other adult_relatives
@@ -1130,24 +1097,16 @@ question: |
 subquestion: |
   So far you have told us about:
 
-  % if parent_lives_with_child():
-  % if not parents[0].address.unknown:    
-  % if parents[0].lives_with_child:
+  % if has_legal_parent:
   * ${ parents[0].name_full()}, Parent
-  % endif
-  % endif
   % if has_second_parent:
-  % if not parents[1].address.unknown:  
-  % if parents[1].lives_with_child:
   * ${ parents[1].name_full()}, Parent
-  % endif
-  % endif
   % endif
   % endif
   % for person in caregivers:
   % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
-  % endif
+  % endif    
   % endfor
   % for adult in adult_relatives:
   * ${adult.name_full()}, ${adult.relationship}
@@ -1231,7 +1190,7 @@ code: |
   def any_publication():
  
     for person in relatives:
-      if person.address.unknown:
+      if not person.address.known:
         return True
 
     return False
@@ -1255,8 +1214,8 @@ code: |
         if caregiver.is_family or caregiver.is_stg:
           temp_list.append(caregiver)    	  
     if adult_relatives.there_are_any:
-      for x in range(adult_relatives.number() - 1):
-        temp_list.append(adult_relatives[x])
+      for adult_relative in adult_relatives:
+        temp_list.append(adult_relative)
   relatives = ALPeopleList("relatives", elements = temp_list )
   
   build_relatives_list = True
@@ -1280,8 +1239,8 @@ code: |
         if caregiver.is_family or caregiver.is_stg:
           temp_list.append(caregiver)    	  
     if adult_relatives.there_are_any:
-      for x in range(adult_relatives.number() - 1):
-        temp_list.append(adult_relatives[x])
+      for adult_relative in adult_relatives:
+        temp_list.append(adult_relative)
   notice_parties = ALPeopleList("relatives", elements = temp_list )
   
   build_notice_parties = True
@@ -2905,13 +2864,13 @@ attachment:
     - "is_delivery_party_custody_0": ${ True if notice_parties[0].notice_relationship == "custody" else "" }
     - "is_delivery_party_other_0": ${ True if notice_parties[0].notice_relationship == "other" else "" }
     - "delivery_party_other_relationship_0": ${ notice_parties[0].other_notice_relationship if notice_parties[0].notice_relationship == "other" else "" }
-    - "delivery_party_address_0": ${ notice_parties[0].address.on_one_line(bare=True) if notice_parties[0].address.unknown == False else "" }
+    - "delivery_party_address_0": ${ notice_parties[0].address.on_one_line(bare=True) if notice_parties[0].address.known else "" }
       
-    - "is_delivery_party_hand_0": ${ notice_parties[0].hand_delivery if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method else '' }
-    - "is_delivery_party_mail_0": ${ notice_parties[0].mail_delivery if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method else '' }
+    - "is_delivery_party_hand_0": ${ notice_parties[0].hand_delivery if notice_parties[0].address.known and notice_parties[0].knows_delivery_method else '' }
+    - "is_delivery_party_mail_0": ${ notice_parties[0].mail_delivery if notice_parties[0].address.known and notice_parties[0].knows_delivery_method else '' }
     
     - "delivery_party_mail_location_0": |
-        % if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method and notice_parties[0].mail_delivery:
+        % if notice_parties[0].address.known and notice_parties[0].knows_delivery_method and notice_parties[0].mail_delivery:
         % if notice_parties[0].delivery_mail_address != "" and notice_parties[0].delivery_mail_city != "" and notice_parties[0].delivery_mail_state != "":
         ${notice_parties[0].delivery_mail_address }, ${notice_parties[0].delivery_mail_city}, ${ state_name(notice_parties[0].delivery_mail_state) }
         % elif notice_parties[0].delivery_mail_address != "" and notice_parties[0].delivery_mail_city != "":
@@ -2930,9 +2889,9 @@ attachment:
         % else:
         ${ "" }
         % endif
-    - "is_delivery_party_jail_0": ${ True if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method and notice_parties[0].jail_delivery else '' }
+    - "is_delivery_party_jail_0": ${ True if notice_parties[0].address.known and notice_parties[0].knows_delivery_method and notice_parties[0].jail_delivery else '' }
     - "delivery_party_jail_name_0": |
-        % if notice_parties[0].address.unknown == False and notice_parties[0].knows_delivery_method and notice_parties[0].jail_delivery:
+        % if notice_parties[0].address.known and notice_parties[0].knows_delivery_method and notice_parties[0].jail_delivery:
         % if notice_parties[0].delivery_jail_name != "" and notice_parties[0].jail_delivery_address.address != "" and notice_parties[0].jail_delivery_address.city != "" and notice_parties[0].jail_delivery_address.state != "":
         ${ notice_parties[0].delivery_jail_name }, ${ notice_parties[0].jail_delivery_address.on_one_line(bare=True)}
         % elif notice_parties[0].delivery_jail_name == "":
@@ -2953,13 +2912,13 @@ attachment:
     - "is_delivery_party_custody_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "custody" else "" }
     - "is_delivery_party_other_1": ${ True if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "other" else "" }
     - "delivery_party_other_relationship_1": ${ notice_parties[1].other_notice_relationship if notice_parties.number() > 1 and notice_parties[1].notice_relationship == "other" else "" }
-    - "delivery_party_address_1": ${ notice_parties[1].address.on_one_line(bare=True) if notice_parties.number() > 1 and notice_parties[1].address.unknown == False else "" }
+    - "delivery_party_address_1": ${ notice_parties[1].address.on_one_line(bare=True) if notice_parties.number() > 1 and notice_parties[1].address.known else "" }
     
-    - "is_delivery_party_hand_1": ${ notice_parties[1].hand_delivery if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method else '' }
-    - "is_delivery_party_mail_1": ${ notice_parties[1].mail_delivery if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method else '' }
+    - "is_delivery_party_hand_1": ${ notice_parties[1].hand_delivery if notice_parties.number() > 1 and notice_parties[1].address.known and notice_parties[1].knows_delivery_method else '' }
+    - "is_delivery_party_mail_1": ${ notice_parties[1].mail_delivery if notice_parties.number() > 1 and notice_parties[1].address.known and notice_parties[1].knows_delivery_method else '' }
     
     - "delivery_party_mail_location_1": |
-        % if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method and notice_parties[1].mail_delivery:
+        % if notice_parties.number() > 1 and notice_parties[1].address.known and notice_parties[1].knows_delivery_method and notice_parties[1].mail_delivery:
         % if notice_parties[1].delivery_mail_address != "" and notice_parties[1].delivery_mail_city != "" and notice_parties[1].delivery_mail_state != "":
         ${notice_parties[1].delivery_mail_address }, ${notice_parties[1].delivery_mail_city}, ${ state_name(notice_parties[1].delivery_mail_state) }
         % elif notice_parties[1].delivery_mail_address != "" and notice_parties[1].delivery_mail_city != "":
@@ -2979,10 +2938,10 @@ attachment:
         ${ "" }
         % endif
     
-    - "is_delivery_party_jail_1": ${ True if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method and notice_parties[1].jail_delivery else '' }
+    - "is_delivery_party_jail_1": ${ True if notice_parties.number() > 1 and notice_parties[1].address.known and notice_parties[1].knows_delivery_method and notice_parties[1].jail_delivery else '' }
     
     - "delivery_party_jail_name_1": |
-        % if notice_parties.number() > 1 and notice_parties[1].address.unknown == False and notice_parties[1].knows_delivery_method and notice_parties[1].jail_delivery:
+        % if notice_parties.number() > 1 and notice_parties[1].address.known and notice_parties[1].knows_delivery_method and notice_parties[1].jail_delivery:
         % if notice_parties[1].delivery_jail_name != "" and notice_parties[1].jail_delivery_address.address != "" and notice_parties[1].jail_delivery_address.city != "" and notice_parties[1].jail_delivery_address.state != "":
         ${ notice_parties[1].delivery_jail_name }, ${ notice_parties[1].jail_delivery_address.on_one_line(bare=True)}
         % elif notice_parties[1].delivery_jail_name == "":
@@ -3004,13 +2963,13 @@ attachment:
     - "is_delivery_party_custody_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "custody" else "" }
     - "is_delivery_party_other_2": ${ True if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "other" else "" }
     - "delivery_party_other_relationship_2": ${ notice_parties[2].other_notice_relationship if notice_parties.number() > 2 and notice_parties[2].notice_relationship == "other" else "" }
-    - "delivery_party_address_2": ${ notice_parties[2].address.on_one_line(bare=True) if notice_parties.number() > 2 and notice_parties[2].address.unknown == False else "" }
+    - "delivery_party_address_2": ${ notice_parties[2].address.on_one_line(bare=True) if notice_parties.number() > 2 and notice_parties[2].address.known else "" }
     
-    - "is_delivery_party_hand_2": ${ notice_parties[2].hand_delivery if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method else '' }
-    - "is_delivery_party_mail_2": ${ notice_parties[2].mail_delivery if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method else '' }
+    - "is_delivery_party_hand_2": ${ notice_parties[2].hand_delivery if notice_parties.number() > 2 and notice_parties[2].address.known and notice_parties[2].knows_delivery_method else '' }
+    - "is_delivery_party_mail_2": ${ notice_parties[2].mail_delivery if notice_parties.number() > 2 and notice_parties[2].address.known and notice_parties[2].knows_delivery_method else '' }
     
     - "delivery_party_mail_location_2": |
-        % if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method and notice_parties[2].mail_delivery:
+        % if notice_parties.number() > 2 and notice_parties[2].address.known and notice_parties[2].knows_delivery_method and notice_parties[2].mail_delivery:
         % if notice_parties[2].delivery_mail_address != "" and notice_parties[2].delivery_mail_city != "" and notice_parties[2].delivery_mail_state != "":
         ${notice_parties[2].delivery_mail_address }, ${notice_parties[2].delivery_mail_city}, ${ state_name(notice_parties[2].delivery_mail_state) }
         % elif notice_parties[2].delivery_mail_address != "" and notice_parties[2].delivery_mail_city != "":
@@ -3030,10 +2989,10 @@ attachment:
         ${ "" }
         % endif
     
-    - "is_delivery_party_jail_2": ${ True if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method and notice_parties[2].jail_delivery else '' }
+    - "is_delivery_party_jail_2": ${ True if notice_parties.number() > 2 and notice_parties[2].address.known and notice_parties[2].knows_delivery_method and notice_parties[2].jail_delivery else '' }
     
     - "delivery_party_jail_name_2": |
-        % if notice_parties.number() > 2 and notice_parties[2].address.unknown == False and notice_parties[2].knows_delivery_method and notice_parties[2].jail_delivery:
+        % if notice_parties.number() > 2 and notice_parties[2].address.known and notice_parties[2].knows_delivery_method and notice_parties[2].jail_delivery:
         % if notice_parties[2].delivery_jail_name != "" and notice_parties[2].jail_delivery_address.address != "" and notice_parties[2].jail_delivery_address.city != "" and notice_parties[2].jail_delivery_address.state != "":
         ${ notice_parties[2].delivery_jail_name }, ${ notice_parties[2].jail_delivery_address.on_one_line(bare=True)}
         % elif notice_parties[2].delivery_jail_name == "":
@@ -3055,13 +3014,13 @@ attachment:
     - "is_delivery_party_custody_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "custody" else "" }
     - "is_delivery_party_other_3": ${ True if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "other" else "" }
     - "delivery_party_other_relationship_3": ${ notice_parties[3].other_notice_relationship if notice_parties.number() > 3 and notice_parties[3].notice_relationship == "other" else "" }
-    - "delivery_party_address_3": ${ notice_parties[3].address.on_one_line(bare=True) if notice_parties.number() > 3 and notice_parties[3].address.unknown == False else "" }
+    - "delivery_party_address_3": ${ notice_parties[3].address.on_one_line(bare=True) if notice_parties.number() > 3 and notice_parties[3].address.known else "" }
     
-    - "is_delivery_party_hand_3": ${ notice_parties[3].hand_delivery if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method else '' }
-    - "is_delivery_party_mail_3": ${ notice_parties[3].mail_delivery if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method else '' }
+    - "is_delivery_party_hand_3": ${ notice_parties[3].hand_delivery if notice_parties.number() > 3 and notice_parties[3].address.known and notice_parties[3].knows_delivery_method else '' }
+    - "is_delivery_party_mail_3": ${ notice_parties[3].mail_delivery if notice_parties.number() > 3 and notice_parties[3].address.known and notice_parties[3].knows_delivery_method else '' }
     
     - "delivery_party_mail_location_3": |
-        % if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method and notice_parties[3].mail_delivery:
+        % if notice_parties.number() > 3 and notice_parties[3].address.known and notice_parties[3].knows_delivery_method and notice_parties[3].mail_delivery:
         % if notice_parties[3].delivery_mail_address != "" and notice_parties[3].delivery_mail_city != "" and notice_parties[3].delivery_mail_state != "":
         ${notice_parties[3].delivery_mail_address }, ${notice_parties[3].delivery_mail_city}, ${ state_name(notice_parties[3].delivery_mail_state) }
         % elif notice_parties[3].delivery_mail_address != "" and notice_parties[3].delivery_mail_city != "":
@@ -3081,10 +3040,10 @@ attachment:
         ${ "" }
         % endif
     
-    - "is_delivery_party_jail_3": ${ True if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method and notice_parties[3].jail_delivery else '' }
+    - "is_delivery_party_jail_3": ${ True if notice_parties.number() > 3 and notice_parties[3].address.known and notice_parties[3].knows_delivery_method and notice_parties[3].jail_delivery else '' }
     
     - "delivery_party_jail_name_3": |
-        % if notice_parties.number() > 3 and notice_parties[3].address.unknown == False and notice_parties[3].knows_delivery_method and notice_parties[3].jail_delivery:
+        % if notice_parties.number() > 3 and notice_parties[3].address.known and notice_parties[3].knows_delivery_method and notice_parties[3].jail_delivery:
         % if notice_parties[3].delivery_jail_name != "" and notice_parties[3].jail_delivery_address.address != "" and notice_parties[3].jail_delivery_address.city != "" and notice_parties[3].jail_delivery_address.state != "":
         ${ notice_parties[3].delivery_jail_name }, ${ notice_parties[3].jail_delivery_address.on_one_line(bare=True)}
         % elif notice_parties[3].delivery_jail_name == "":
@@ -3125,13 +3084,13 @@ attachment:
     - "is_delivery_party_custody_0": ${ True if x.notice_relationship == "custody" else "" }
     - "is_delivery_party_other_0": ${ True if x.notice_relationship == "other" else "" }
     - "delivery_party_other_relationship_0": ${ x.other_notice_relationship if x.notice_relationship == "other" else "" }
-    - "delivery_party_address_0": ${ x.address.on_one_line(bare=True) if x.address.unknown == False else "" }
+    - "delivery_party_address_0": ${ x.address.on_one_line(bare=True) if x.address.known else "" }
       
-    - "is_delivery_party_hand_0": ${ x.hand_delivery if x.address.unknown == False and x.knows_delivery_method else '' }
-    - "is_delivery_party_mail_0": ${ x.mail_delivery if x.address.unknown == False and x.knows_delivery_method else '' }
+    - "is_delivery_party_hand_0": ${ x.hand_delivery if x.address.known and x.knows_delivery_method else '' }
+    - "is_delivery_party_mail_0": ${ x.mail_delivery if x.address.known and x.knows_delivery_method else '' }
     
     - "delivery_party_mail_location_0": |
-        % if x.address.unknown == False and x.knows_delivery_method and x.mail_delivery:
+        % if x.address.known and x.knows_delivery_method and x.mail_delivery:
         % if x.delivery_mail_address != "" and x.delivery_mail_city != "" and x.delivery_mail_state != "":
         ${x.delivery_mail_address }, ${x.delivery_mail_city}, ${ state_name(x.delivery_mail_state) }
         % elif x.delivery_mail_address != "" and x.delivery_mail_city != "":
@@ -3150,9 +3109,9 @@ attachment:
         % else:
         ${ "" }
         % endif
-    - "is_delivery_party_jail_0": ${ True if x.address.unknown == False and x.knows_delivery_method and x.jail_delivery else '' }
+    - "is_delivery_party_jail_0": ${ True if x.address.known and x.knows_delivery_method and x.jail_delivery else '' }
     - "delivery_party_jail_name_0": |
-        % if x.address.unknown == False and x.knows_delivery_method and x.jail_delivery:
+        % if x.address.known and x.knows_delivery_method and x.jail_delivery:
         % if x.delivery_jail_name != "" and x.jail_delivery_address.address != "" and x.jail_delivery_address.city != "" and x.jail_delivery_address.state != "":
         ${ x.delivery_jail_name }, ${ x.jail_delivery_address.on_one_line(bare=True)}
         % elif x.delivery_jail_name == "":
@@ -3289,13 +3248,164 @@ review:
     button: |
       **Does ${child.name_full()} have at least one legal parent?**
       ${ word(yesno(has_legal_parent)) }
-  - Edit: parents.revisit
+  - Edit: parents[0].name.first
     button: |
-      **${child.name_full()}'s parents: (Edit to change name, notice or consent, and address)**
+      **Parent name:**
+      ${ parents[0].name_full() }
+    show if: has_legal_parent
 
-      % for person in parents:
-      * ${ person.name_full() }
-      % endfor
+  - Edit: parents[0].address.known
+    button: |
+      **Do you know ${ parents[0].name_full() }'s current address?**
+      ${word(yesno(parents[0].address.known))}
+    show if: has_legal_parent
+  - Edit: parents[0].address.known
+    button: |
+      **Does ${ parents[0].name_full() } live at same address as ${child.name_full()}?**
+      ${word(yesno(parents[0].lives_with_child))}
+    show if: has_legal_parent and parents[0].address.known
+  - Edit: parents[0].address.address
+    button: |
+      **${ parents[0].name_full() }'s current address:**
+      ${parents[0].address.on_one_line(bare=True)}
+    show if: has_legal_parent and parents[0].address.known
+
+  - Edit: parents[0].agrees
+    button: |
+      **Information about ${ parents[0].name_full() }:**
+      
+      % if parents[0].agrees:
+      * ${parents[0].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[0].is_dead:
+      * ${parents[0].name_full()} died on ${ parents[0].decease_date }.
+      % endif
+      % if parents[0].gave_up_custody:
+      * ${parents[0].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[0].not_found:
+      * ${parents[0].name_full()} cannot be found. Last contact was on ${parents[0].last_contact_date} at ${parents[0].last_contact_location}.
+      % endif
+      % if parents[0].unable:
+      * ${parents[0].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent
+  - Edit: parents[0].knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${parents[0].name_full()}?**
+      ${ word(yesno(parents[0].knows_delivery_method)) }
+    show if: has_legal_parent and not parents[0].is_dead and not parents[0].not_found
+  - Edit: parents[0].hand_delivery
+    button: |
+      **Delivery to ${ parents[0].name_full() } by: (Edit to view and change details)**
+      
+      % if parents[0].hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if parents[0].mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if parents[0].jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if parents[0].hand_delivery != True and parents[0].mail_delivery != True and parents[0].jail_delivery != True:
+        * None entered
+      % endif
+    show if: has_legal_parent and not parents[0].is_dead and not parents[0].not_found and parents[0].knows_delivery_method
+  - Edit: parents[0].delivery_date
+    button: |
+      **Delivery to ${ parents[0].name_full() } on:**
+      % if parents[0].knows_delivery_date == True and parents[0].knows_delivery_time == True:
+      ${ parents[0].delivery_date } at ${ format_time(parents[0].delivery_time, "h:mm a") }
+      % elif parents[0].knows_delivery_date: 
+      ${ parents[0].delivery_date }, time not entered.
+      % elif parents[0].knows_delivery_time:
+      Date not entered, ${ format_time(parents[0].delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: has_legal_parent and not parents[0].is_dead and not parents[0].not_found and parents[0].knows_delivery_method
+
+  - Edit: has_second_parent
+    button: |
+      **Does ${child.name_full()} have a second legal parent?**
+      ${ word(yesno(has_second_parent)) }  
+
+  - Edit: parents[1].name.first
+    button: |
+      **Second parent name:**
+      ${ parents[1].name_full() }
+    show if: has_legal_parent and has_second_parent
+  - Edit: parents[1].address.known
+    button: |
+      **Do you know ${ parents[1].name_full() }'s current address?**
+      ${word(yesno(parents[1].address.known))}
+    show if: has_legal_parent
+  - Edit: parents[1].address.known
+    button: |
+      **Does ${ parents[1].name_full() } live at same address as ${child.name_full()}?**
+      ${word(yesno(parents[1].lives_with_child))}
+    show if: has_legal_parent and parents[0].address.known
+  - Edit: parents[1].address.address
+    button: |
+      **${ parents[1].name_full() }'s current address:**
+      ${parents[1].address.on_one_line(bare=True)}
+    show if: has_legal_parent and has_second_parent and parents[0].address.known
+  - Edit: parents[1].agrees
+    button: |
+      **Information about ${ parents[1].name_full() }:**
+      
+      % if parents[1].agrees:
+      * ${parents[1].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[1].is_dead:
+      * ${parents[1].name_full()} died on ${ parents[1].decease_date }.
+      % endif
+      % if parents[1].gave_up_custody:
+      * ${parents[1].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[1].not_found:
+      * ${parents[1].name_full()} cannot be found. Last contact was on ${parents[1].last_contact_date} at ${parents[1].last_contact_location}.
+      % endif
+      % if parents[1].unable:
+      * ${parents[1].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent and has_second_parent
+  - Edit: parents[1].knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${parents[1].name_full()}?**
+      ${ word(yesno(parents[1].knows_delivery_method)) }
+    show if: has_legal_parent and has_second_parent and not parents[1].is_dead and not parents[1].not_found
+  - Edit: parents[1].hand_delivery
+    button: |
+      **Delivery to ${ parents[1].name_full() } by: (Edit to view and change details)**
+      
+      % if parents[1].hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if parents[1].mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if parents[1].jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if parents[1].hand_delivery != True and parents[1].mail_delivery != True and parents[1].jail_delivery != True:
+        * None entered
+      % endif
+    show if: has_legal_parent and has_second_parent and not parents[1].is_dead and not parents[1].not_found and parents[1].knows_delivery_method
+  - Edit: parents[1].delivery_date
+    button: |
+      **Delivery to ${ parents[1].name_full() } on:**
+      % if parents[1].knows_delivery_date == True and parents[1].knows_delivery_time == True:
+      ${ parents[1].delivery_date } at ${ format_time(parents[1].delivery_time, "h:mm a") }
+      % elif parents[1].knows_delivery_date: 
+      ${ parents[1].delivery_date }, time not entered.
+      % elif parents[1].knows_delivery_time:
+      Date not entered, ${ format_time(parents[1].delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: has_legal_parent and has_second_parent and not parents[1].is_dead and not parents[1].not_found and parents[1].knows_delivery_method
       
   - Edit: other_case_involving_parents
     button: |
@@ -3338,10 +3448,10 @@ review:
       **Spouse's name:**
       ${ spouse.name_full()  }
     show if: minor_is_married
-  - Edit: spouse.address.unknown
+  - Edit: spouse.address.known
     button: |
       **${spouse.name_full()}'s current address:**
-      % if spouse.address.unknown:
+      % if not spouse.address.known:
       Unknown
       % else:
       ${ spouse.address.on_one_line(bare=True) }
@@ -3665,11 +3775,6 @@ review:
       **Do you want to add your e-signature to your forms?**
       ${ word(yesno(e_signature)) }
 
-
-
-
-
-
 ---
 id: other cases revisit review screen
 continue button field: other_cases.revisit
@@ -3830,10 +3935,10 @@ review:
     button: |
       **Name:**
       ${ x.name_full()  }
-  - Edit: x.address.unknown
+  - Edit: x.address.known
     button: |
       **Current address:**
-      % if x.address.unknown:
+      % if not x.address.known:
       Unknown
       % elif x.lives_with_child:
       ${ child.address.on_one_line(bare=True) }
@@ -3945,10 +4050,10 @@ review:
       % else:
       Other: ${ x.other_notice_relationship }
       % endif      
-  - Edit: x.address.unknown
+  - Edit: x.address.known
     button: |
       **Current address:**
-      % if x.address.unknown:
+      % if not x.address.known:
       Unknown
       % else:
       ${ x.address.on_one_line(bare=True) }
@@ -4104,13 +4209,159 @@ review:
     button: |
       **Does ${child.name_full()} have at least one legal parent?**
       ${ word(yesno(has_legal_parent)) }
-  - Edit: parents.revisit
-    button: |
-      **${child.name_full()}'s parents: (Edit to change name, notice or consent, and address)**
 
-      % for person in parents:
-      * ${ person.name_full() }
-      % endfor
+  - Edit: parents[0].name.first
+    button: |
+      **Parent name:**
+      ${ parents[0].name_full() }
+    show if: has_legal_parent
+  - Edit: parents[0].address.known
+    button: |
+      **Do you know ${ parents[0].name_full() }'s current address?**
+      ${word(yesno(parents[0].address.known))}
+    show if: has_legal_parent
+  - Edit: parents[0].address.known
+    button: |
+      **Does ${ parents[0].name_full() } live at same address as ${child.name_full()}?**
+      ${word(yesno(parents[0].lives_with_child))}
+    show if: has_legal_parent and parents[0].address.known
+  - Edit: parents[0].address.address
+    button: |
+      **${ parents[0].name_full() }'s current address:**
+      ${parents[0].address.on_one_line(bare=True)}
+    show if: has_legal_parent and parents[0].address.known
+  - Edit: parents[0].agrees
+    button: |
+      **Information about ${ parents[0].name_full() }:**
+      
+      % if parents[0].agrees:
+      * ${parents[0].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[0].is_dead:
+      * ${parents[0].name_full()} died on ${ parents[0].decease_date }.
+      % endif
+      % if parents[0].gave_up_custody:
+      * ${parents[0].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[0].not_found:
+      * ${parents[0].name_full()} cannot be found. Last contact was on ${parents[0].last_contact_date} at ${parents[0].last_contact_location}.
+      % endif
+      % if parents[0].unable:
+      * ${parents[0].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent
+  - Edit: parents[0].knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${parents[0].name_full()}?**
+      ${ word(yesno(parents[0].knows_delivery_method)) }
+    show if: has_legal_parent and not parents[0].is_dead and not parents[0].not_found
+  - Edit: parents[0].hand_delivery
+    button: |
+      **Delivery to ${ parents[0].name_full() } by: (Edit to view and change details)**
+      
+      % if parents[0].hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if parents[0].mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if parents[0].jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if parents[0].hand_delivery != True and parents[0].mail_delivery != True and parents[0].jail_delivery != True:
+        * None entered
+      % endif
+    show if: has_legal_parent and not parents[0].is_dead and not parents[0].not_found and parents[0].knows_delivery_method
+  - Edit: parents[0].delivery_date
+    button: |
+      **Delivery to ${ parents[0].name_full() } on:**
+      % if parents[0].knows_delivery_date == True and parents[0].knows_delivery_time == True:
+      ${ parents[0].delivery_date } at ${ format_time(parents[0].delivery_time, "h:mm a") }
+      % elif parents[0].knows_delivery_date: 
+      ${ parents[0].delivery_date }, time not entered.
+      % elif parents[0].knows_delivery_time:
+      Date not entered, ${ format_time(parents[0].delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: has_legal_parent and not parents[0].is_dead and not parents[0].not_found and parents[0].knows_delivery_method
+
+  - Edit: has_second_parent
+    button: |
+      **Does ${child.name_full()} have a second legal parent?**
+      ${ word(yesno(has_second_parent)) }  
+
+  - Edit: parents[1].name.first
+    button: |
+      **Second parent name:**
+      ${ parents[1].name_full() }
+    show if: has_legal_parent and has_second_parent
+  - Edit: parents[1].address.known
+    button: |
+      **${ parents[1].name_full() }'s current address:**
+      % if not parents[1].address.known:
+      Unknown
+      % elif parents[1].lives_with_child:
+      ${ child.address.on_one_line(bare=True) }
+      % else:
+      ${ parents[1].address.on_one_line(bare=True) }
+      % endif
+    show if: has_legal_parent and has_second_parent
+  - Edit: parents[1].agrees
+    button: |
+      **Information about ${ parents[1].name_full() }:**
+      
+      % if parents[1].agrees:
+      * ${parents[1].name_full()} agrees to the guardianship.
+      % endif
+      % if parents[1].is_dead:
+      * ${parents[1].name_full()} died on ${ parents[1].decease_date }.
+      % endif
+      % if parents[1].gave_up_custody:
+      * ${parents[1].name_full()} voluntarily gave up custody of ${child.name_full()}.
+      % endif
+      % if parents[1].not_found:
+      * ${parents[1].name_full()} cannot be found. Last contact was on ${parents[1].last_contact_date} at ${parents[1].last_contact_location}.
+      % endif
+      % if parents[1].unable:
+      * ${parents[1].name_full()} is unable or unwilling to take care of ${child.name_full()}.
+      % endif
+    show if: has_legal_parent and has_second_parent
+  - Edit: parents[1].knows_delivery_method
+    button: |
+      **Do you know how and when you will send your forms to ${parents[1].name_full()}?**
+      ${ word(yesno(parents[1].knows_delivery_method)) }
+    show if: has_legal_parent and has_second_parent and not parents[1].is_dead and not parents[1].not_found
+  - Edit: parents[1].hand_delivery
+    button: |
+      **Delivery to ${ parents[1].name_full() } by: (Edit to view and change details)**
+      
+      % if parents[1].hand_delivery == True:
+        * Hand delivery
+      % endif
+      % if parents[1].mail_delivery == True:
+        * US mail or delivery company
+      % endif
+      % if parents[1].jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+      % if parents[1].hand_delivery != True and parents[1].mail_delivery != True and parents[1].jail_delivery != True:
+        * None entered
+      % endif
+    show if: has_legal_parent and has_second_parent and not parents[1].is_dead and not parents[1].not_found and parents[1].knows_delivery_method
+  - Edit: parents[1].delivery_date
+    button: |
+      **Delivery to ${ parents[1].name_full() } on:**
+      % if parents[1].knows_delivery_date == True and parents[1].knows_delivery_time == True:
+      ${ parents[1].delivery_date } at ${ format_time(parents[1].delivery_time, "h:mm a") }
+      % elif parents[1].knows_delivery_date: 
+      ${ parents[1].delivery_date }, time not entered.
+      % elif parents[1].knows_delivery_time:
+      Date not entered, ${ format_time(parents[1].delivery_time, "h:mm a") }.
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: has_legal_parent and has_second_parent and not parents[1].is_dead and not parents[1].not_found and parents[1].knows_delivery_method
       
   - Edit: other_case_involving_parents
     button: |
@@ -4153,10 +4404,10 @@ review:
       **Spouse's name:**
       ${ spouse.name_full()  }
     show if: minor_is_married
-  - Edit: spouse.address.unknown
+  - Edit: spouse.address.known
     button: |
       **${spouse.name_full()}'s current address:**
-      % if spouse.address.unknown:
+      % if not spouse.address.known:
       Unknown
       % else:
       ${ spouse.address.on_one_line(bare=True) }
