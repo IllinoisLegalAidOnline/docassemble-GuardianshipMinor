@@ -89,7 +89,7 @@ code: |
       parents[0].address.known = False
     else:
       if parents[0].address.known:
-        parents[0].address.address
+        get_parent_address(parents[0], child)
       else:
         parents[0].notice_by_publication
       parents[0].notice_relationship = "parent"  
@@ -106,7 +106,7 @@ code: |
         parents[1].address.known = False
       else:
         if parents[1].address.known:
-          parents[1].address.address
+          get_parent_address(parents[1], child)
         else:
           parents[1].notice_by_publication  
         parents[1].notice_relationship = "parent"  
@@ -114,7 +114,7 @@ code: |
         parents[1].hand_delivery
         parents[1].delivery_date
 
-  parent_child_same_address_check
+  # parent_child_same_address_check
   
   if other_case_involving_parents:
     other_cases.gather()
@@ -155,15 +155,16 @@ code: |
     if users[1].age_in_years() < 18:
       co_guardian_too_young
     else:
-      if users[1].is_willing == False:
-        co_guardian_not_willing
-      else:
+      if users[1].is_willing:
         users[1].address.address
         users[1].job
         users[1].is_disabled
         users[1].found_negligent
         if users[1].has_felony_conviction:
           users[1].felony_convictions.gather()
+        users[1].phone_number 
+      else:
+        co_guardian_not_willing
 
   oath_intro
   if guardianship_type != "estate":
@@ -666,26 +667,36 @@ content: |
 #  if parents.number() >= 2:
 #    parents.there_is_another = False
 ---
-reconsider: True
+#reconsider: True
+#code: |
+#  if has_legal_parent:
+#    if parents[0].address.known:
+#      if parents[0].lives_with_child:
+#        parents[0].address.address = child.address.address
+#        parents[0].address.unit = child.address.unit
+#        parents[0].address.city = child.address.city
+#        parents[0].address.state = child.address.state
+#        parents[0].address.zip = child.address.zip
+#    	if has_second_parent:
+#        if parents[1].address.known:
+#          if parents[1].lives_with_child:
+#            parents[1].address.address = child.address.address
+#            parents[1].address.unit = child.address.unit
+#            parents[1].address.city = child.address.city
+#            parents[1].address.state = child.address.state
+#            parents[1].address.zip = child.address.zip
+#
+#  parent_child_same_address_check = True
+---
 code: |
-  if has_legal_parent:
-    if parents[0].address.known:
-      if parents[0].lives_with_child:
-        parents[0].address.address = child.address.address
-        parents[0].address.unit = child.address.unit
-        parents[0].address.city = child.address.city
-        parents[0].address.state = child.address.state
-        parents[0].address.zip = child.address.zip
-    	if has_second_parent:
-        if parents[1].address.known:
-          if parents[1].lives_with_child:
-            parents[1].address.address = child.address.address
-            parents[1].address.unit = child.address.unit
-            parents[1].address.city = child.address.city
-            parents[1].address.state = child.address.state
-            parents[1].address.zip = child.address.zip
-
-  parent_child_same_address_check = True
+  def get_parent_address(parent, child):
+    if parent.lives_with_child:
+      parent.address = child.address.copy_deep(parent.attr_name('address'))
+      parent.address.known = True
+    else:
+      parent.address.address
+    return
+ 
 ---
 id: another court case that involves parents
 question: |
@@ -828,6 +839,7 @@ code: |
 code: |
   caregivers[i].name.first
   caregivers[i].relationship
+  caregivers[i].address = child.address.copy_deep(caregivers[i].attr_name('address'))
   caregivers[i].address.known = True
   caregivers[i].agrees
   caregivers[i].notice_relationship
@@ -884,9 +896,9 @@ fields:
   - "Relationship to ${child.name_full()}": caregivers[i].relationship
     maxlength: 25
   - "Are they related to to ${child.name_full()} through blood or marriage?": caregivers[i].is_family
-    datatype: yesnowide
+    datatype: yesnoradio
   - "Are they ${child.name_full()}'s short-term guardian?": caregivers[i].is_stg
-    datatype: yesnowide
+    datatype: yesnoradio
 ---
 id: any other caregivers
 question: |  
@@ -1004,7 +1016,7 @@ subquestion: |
     <h6 class="alert-heading">Important information about notice and consent</h6>
     <p>You will need to notify or get consent from ${child.name_full()}'s other adult relatives and a short-term guardian, if any.<br>
     <ul>
-    <li>Include ${child.name_full()}'s <b>parents</b>, adult brothers and sisters, and short-term guardian, if any.</li>
+    <li>Include ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.</li>
     <li>If ${child.name_full()} has none of those relatives or a short-term guardian, then you will need to list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).</li></ul></p>
   </div>
 
@@ -1019,7 +1031,7 @@ code: |
   adult_relatives[i].relationship
   adult_relatives[i].address.known
   adult_relatives[i].agrees
-  if adult_relatives[i].address.known:
+  if not adult_relatives[i].address.known:
     adult_relatives[i].notice_by_publication  
   adult_relatives[i].notice_relationship
   if adult_relatives[i].knows_delivery_method:
@@ -1553,6 +1565,52 @@ content: |
   * [**Outlook**](https://outlook.live.com/owa/?nlp=1&signup=1)
   * [**Yahoo**](https://login.yahoo.com/account/create?.lang=en-US&.intl=us)
 ---
+id: guardian contact information
+question: |
+  What is ${users[1].name_full()}'s contact information?
+subquestion: |
+  The court or other parties might need to contact them about this case.
+
+  **This information will appear on the court forms.**
+  
+  If ${users[1].name_full()} does not want to list a phone number on the forms, leave it blank.
+
+  If ${users[1].name_full()} has an email address, they must list it. They should check their email daily, otherwise they may miss important court documents or information about their case.
+
+  ${ collapse_template(co_guardian_contact_info_help) }  
+fields:  
+  - "${users[1].name_full()}'s phone number": users[1].phone_number
+    datatype: al_international_phone
+    required: False
+  - label: |
+      Does ${users[1].name_full()} have an email address?
+    field: users[1].has_email_address      
+    datatype: yesnoradio
+  - note: |
+      This email address will appear on the court forms. They should check 
+      this email daily, otherwise they may miss important information about 
+      the case.
+    show if:
+      variable: users[1].has_email_address
+      is: True
+  - "${users[1].name_full()}'s email address": users[1].email    
+    datatype: email
+    show if: 
+      variable: users[1].has_email_address
+      is: True
+---
+template: co_guardian_contact_info_help
+subject: |
+  **What if ${users[1].name_full()} doesn't want to list their email address?**
+content: |  
+  If ${users[1].name_full()} does not want to enter their personal email address, they can create a new email account to get email about the case.
+  
+  To make a new email account try one of these email services:
+  
+  * [**Gmail**](https://accounts.google.com/SignUp)
+  * [**Outlook**](https://outlook.live.com/owa/?nlp=1&signup=1)
+  * [**Yahoo**](https://login.yahoo.com/account/create?.lang=en-US&.intl=us)
+---
 id: add co-guardian
 question: |
   Do you want someone to be a co-guardian of ${child.name_full()} with you? 
@@ -1679,6 +1737,11 @@ code: |
 code: |
   if users[1].felony_convictions.number_gathered() >= 3:
     users[1].felony_convictions.there_is_another = False
+---
+# the valid_co variable is used for show ifs on review screen entries
+reconsider: True
+code: |
+  valid_co = valid_co_guardian()
 ---
 id: oath intro
 continue button field: oath_intro
@@ -3600,29 +3663,29 @@ review:
     show if: add_co_guardian
   - Edit: users[1].address.address
     button: |
-      **${ users[1].name_full() }'s' address:**[NEWLINE]
+      **${ users[1].name_full() }'s address:**[NEWLINE]
       ${ users[1].address.on_one_line(bare=True) }
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co  
   - Edit: users[1].job
     button: |
       **What is ${ users[1].name_full() }'s current job?**
       ${users[1].job}
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].is_disabled
     button: |
       **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
       ${ word(yesno(users[1].is_disabled))}
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].found_negligent
     button: |
       **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].has_felony_conviction
     button: |
       **Does ${ users[1].name_full() } have any felony convictions?**
       ${ word(yesno(users[1].has_felony_conviction)) }
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].felony_convictions.revisit
     button: |
       **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
@@ -3630,7 +3693,26 @@ review:
       % for conviction in users[1].felony_convictions:
       * Date: ${conviction.date}, Charge: ${ conviction.name.text }
       % endfor
-    show if: add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction
+    show if: add_co_guardian and valid_co and users[1].has_felony_conviction
+  - Edit: users[1].phone_number
+    button: |
+      **${ users[1].name_full() }'s phone number:**
+      % if users[1].phone_number == "":
+      None entered
+      % else:
+      ${ phone_number_formatted(users[1].phone_number) }
+      % endif
+    show if: add_co_guardian and valid_co
+  - Edit: users[1].has_email_address
+    button: |
+      **Does ${ users[1].name_full() }'s have an email address?**
+      ${ word(yesno(users[1].has_email_address)) }
+    show if: add_co_guardian and valid_co
+  - Edit: users[1].email
+    button: |
+      **${ users[1].name_full() }'s email:**
+      ${ users[1].email }
+    show if: add_co_guardian and valid_co and users[1].has_email_address    
   - Edit: oath_person_agree
     button: |
       **Do all proposed guardians agree to the terms of guardianship of the person?**
@@ -3913,92 +3995,6 @@ subquestion: |
   % if parents.number() == 1:
   ${ parents.add_action() }
   % endif
----
-table: parents.table
-rows: parents
-columns:
-  - Name: |
-      row_item.name_full() if defined("row_item.name.first") else ""
-edit:
-  - review_parent_details
-delete buttons: True
-confirm: True
----
-id: parent details review screen
-continue button field: x.review_parent_details
-section: Child's parents, caregivers, and relatives
-generic object: ALIndividual
-question: |
-  Edit ${ x.name_full() }'s information
-review: 
-  - Edit: x.name.first
-    button: |
-      **Name:**
-      ${ x.name_full()  }
-  - Edit: x.address.known
-    button: |
-      **Current address:**
-      % if not x.address.known:
-      Unknown
-      % elif x.lives_with_child:
-      ${ child.address.on_one_line(bare=True) }
-      % else:
-      ${ x.address.on_one_line(bare=True) }
-      % endif
-  - Edit: x.agrees
-    button: |
-      **Information about ${ x.name_full() }:**
-      
-      % if x.agrees:
-      * ${x.name_full()} agrees to the guardianship.
-      % endif
-      % if x.is_dead:
-      * ${x.name_full()} died on ${ x.decease_date }.
-      % endif
-      % if x.gave_up_custody:
-      * ${x.name_full()} voluntarily gave up custody of ${child.name_full()}.
-      % endif
-      % if x.not_found:
-      * ${x.name_full()} cannot be found. Last contact was on ${x.last_contact_date} at ${x.last_contact_location}.
-      % endif
-      % if x.unable:
-      * ${x.name_full()} is unable or unwilling to take care of ${child.name_full()}.
-      % endif
-    show if: has_legal_parent
-  - Edit: x.knows_delivery_method
-    button: |
-      **Do you know how and when you will send your forms to ${x.name_full()}?**
-      ${ word(yesno(x.knows_delivery_method)) }
-  - Edit: x.hand_delivery
-    button: |
-      **Delivery by: (Edit to view and change details)**
-      
-      % if x.hand_delivery == True:
-        * Hand delivery
-      % endif
-      % if x.mail_delivery == True:
-        * US mail or delivery company
-      % endif
-      % if x.jail_delivery == True:
-        * Mail from prison or jail
-      % endif
-      % if x.hand_delivery != True and x.mail_delivery != True and x.jail_delivery != True:
-        * None entered
-      % endif
-    show if: x.knows_delivery_method
-  - Edit: x.delivery_date
-    button: |
-      **Delivery on:**
-      % if x.knows_delivery_date == True and x.knows_delivery_time == True:
-      ${ x.delivery_date } at ${ format_time(x.delivery_time, "h:mm a") }
-      % elif x.knows_delivery_date: 
-      ${ x.delivery_date }, time not entered.
-      % elif x.knows_delivery_time:
-      Date not entered, ${ format_time(x.delivery_time, "h:mm a") }.
-      % else:
-      Incomplete date and time entered.
-      % endif
-    show if: x.knows_delivery_method
 ---
 id: adult relatives revisit review screen
 continue button field: adult_relatives.revisit
@@ -4563,29 +4559,29 @@ review:
     show if: add_co_guardian
   - Edit: users[1].address.address
     button: |
-      **${ users[1].name_full() }'s' address:**[NEWLINE]
+      **${ users[1].name_full() }'s address:**[NEWLINE]
       ${ users[1].address.on_one_line(bare=True) }
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co  
   - Edit: users[1].job
     button: |
       **What is ${ users[1].name_full() }'s current job?**
       ${users[1].job}
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].is_disabled
     button: |
       **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
       ${ word(yesno(users[1].is_disabled))}
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].found_negligent
     button: |
       **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].has_felony_conviction
     button: |
       **Does ${ users[1].name_full() } have any felony convictions?**
       ${ word(yesno(users[1].has_felony_conviction)) }
-    show if: add_co_guardian and valid_co_guardian()
+    show if: add_co_guardian and valid_co
   - Edit: users[1].felony_convictions.revisit
     button: |
       **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
@@ -4593,7 +4589,27 @@ review:
       % for conviction in users[1].felony_convictions:
       * Date: ${conviction.date}, Charge: ${ conviction.name.text }
       % endfor
-    show if: add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction
+    show if: add_co_guardian and valid_co and users[1].has_felony_conviction
+  - Edit: users[1].phone_number
+    button: |
+      **${ users[1].name_full() }'s phone number:**
+      % if users[1].phone_number == "":
+      None entered
+      % else:
+      ${ phone_number_formatted(users[1].phone_number) }
+      % endif
+    show if: add_co_guardian and valid_co
+  - Edit: users[1].has_email_address
+    button: |
+      **Does ${ users[1].name_full() }'s have an email address?**
+      ${ word(yesno(users[1].has_email_address)) }
+    show if: add_co_guardian and valid_co
+  - Edit: users[1].email
+    button: |
+      **${ users[1].name_full() }'s email:**
+      ${ users[1].email }
+    show if: add_co_guardian and valid_co and users[1].has_email_address    
+  
   - Edit: oath_person_agree
     button: |
       **Do all proposed guardians agree to the terms of guardianship of the person?**
