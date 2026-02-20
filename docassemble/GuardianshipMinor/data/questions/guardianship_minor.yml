@@ -165,7 +165,7 @@ code: |
         users[1].phone_number 
       else:
         co_guardian_not_willing
-
+  
   oath_intro
   if guardianship_type != "estate":
     if not oath_person_agree:
@@ -1738,11 +1738,6 @@ code: |
   if users[1].felony_convictions.number_gathered() >= 3:
     users[1].felony_convictions.there_is_another = False
 ---
-# the valid_co variable is used for show ifs on review screen entries
-reconsider: True
-code: |
-  valid_co = valid_co_guardian()
----
 id: oath intro
 continue button field: oath_intro
 question: |
@@ -2280,6 +2275,8 @@ question: |
 subquestion: |
   
   Your forms are ready. View and download your forms below. Click **:edit: Make changes** to fix any mistakes.
+
+  Read the **instructions** for next steps on how to use the forms and notify others about the guardianship case. 
   
   This program **does not file** your forms with the court or deliver them to other parties in your case. You will need to do this yourself. Learn about [**e-filing in Illinois**](https://www.illinoiscourts.gov/eservices/information-for-filers-without-lawyers).
 
@@ -2471,9 +2468,9 @@ attachment:
     - "relative_relationship_3": ${ relatives[3].relationship if relatives.number() > 3 else "" }
     - "more_relatives_no": ${ True if relatives.number()<= 4 else "" }
     - "more_relatives_yes": ${ True if relatives.number() > 4 else "" }
-    - "other_case_number_0": ${ other_cases[0].name.text if other_case_involving_parents and other_cases.number > 0 else "" }
+    - "other_case_number_0": ${ other_cases[0].name.text if other_case_involving_parents and other_cases.number() > 0 else "" }
     - "other_case_state_0": |
-        % if other_case_involving_parents and other_cases.number > 0:
+        % if other_case_involving_parents and other_cases.number() > 0:
         % if other_cases[0].in_us:
         ${state_name(other_cases[0].state)}
         % else:  
@@ -2483,7 +2480,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_0": |
-        % if other_case_involving_parents and other_cases.number > 0:
+        % if other_case_involving_parents and other_cases.number() > 0:
         % if other_cases[0].in_us and other_cases[0].state == "IL":
         ${ other_cases[0].county } County
         % else:  
@@ -2492,9 +2489,9 @@ attachment:
         % else:  
         ${""}
         % endif         
-    - "other_case_number_1": ${ other_cases[1].name.text if other_case_involving_parents and other_cases.number > 1 else "" }
+    - "other_case_number_1": ${ other_cases[1].name.text if other_case_involving_parents and other_cases.number() > 1 else "" }
     - "other_case_state_1": |
-        % if other_case_involving_parents and other_cases.number > 1:
+        % if other_case_involving_parents and other_cases.number() > 1:
         % if other_cases[1].in_us:
         ${state_name(other_cases[1].state)}
         % else:  
@@ -2504,17 +2501,17 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_1": |
-        % if other_case_involving_parents and other_cases.number > 1:
-        % if other_cases[1].in_us and other_cases[0].state == "IL":
+        % if other_case_involving_parents and other_cases.number() > 1:
+        % if other_cases[1].in_us and other_cases[1].state == "IL":
         ${ other_cases[1].county } County
         % else:  
         ${ "" }
         % endif 
         % else:  
         ${""}
-        % endif         
-    - "more_cases_no": ${ True if not other_case_involving_parents or (other_case_involving_parents and other_cases.number <= 2) else "" }
-    - "more_cases_yes": ${ True if other_case_involving_parents and other_cases.number > 2 else "" }
+        % endif        
+    - "more_cases_no": ${ True if not other_case_involving_parents or (other_case_involving_parents and other_cases.number()<= 2) else "" }
+    - "more_cases_yes": ${ True if other_case_involving_parents and other_cases.number() > 2 else "" }
     - "estate_unknown": ${ True if child_estate == "unknown" else "" }
     - "estate_0": ${ True if child_estate == "zero" else "" }
     - "estate_other": ${ True if child_estate == "other" else "" }
@@ -2638,9 +2635,9 @@ attachment:
     - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
-    - "other_case_number_2": ${ other_cases[2].name.text if other_cases.number > 2 else "" }
+    - "other_case_number_2": ${ other_cases[2].name.text if other_cases.number() > 2 else "" }
     - "other_case_state_2": |
-        % if other_cases.number > 2:
+        % if other_cases.number() > 2:
         % if other_cases[2].in_us:
         ${state_name(other_cases[2].state)}
         % else:  
@@ -2650,7 +2647,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_2": |
-        % if other_cases.number > 2:
+        % if other_cases.number() > 2:
         % if other_cases[2].in_us and other_cases[2].state == "IL":
         ${ other_cases[2].county } County
         % else:  
@@ -2659,9 +2656,9 @@ attachment:
         % else:  
         ${""}
         % endif         
-    - "other_case_number_3": ${ other_cases[3].name.text if other_cases.number > 3 else "" }
+    - "other_case_number_3": ${ other_cases[3].name.text if other_cases.number() > 3 else "" }
     - "other_case_state_3": |
-        % if other_cases.number > 3:
+        % if other_cases.number() > 3:
         % if other_cases[3].in_us:
         ${state_name(other_cases[3].state)}
         % else:  
@@ -2671,7 +2668,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_3": |
-        % if other_cases.number > 3:
+        % if other_cases.number() > 3:
         % if other_cases[3].in_us and other_cases[3].state == "IL":
         ${ other_cases[3].county } County
         % else:  
@@ -2680,9 +2677,9 @@ attachment:
         % else:  
         ${""}
         % endif
-    - "other_case_number_4": ${ other_cases[4].name.text if other_cases.number > 4 else "" }
+    - "other_case_number_4": ${ other_cases[4].name.text if other_cases.number() > 4 else "" }
     - "other_case_state_4": |
-        % if other_cases.number > 4:
+        % if other_cases.number() > 4:
         % if other_cases[4].in_us:
         ${state_name(other_cases[4].state)}
         % else:  
@@ -2692,7 +2689,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_4": |
-        % if other_cases.number > 4:
+        % if other_cases.number() > 4:
         % if other_cases[4].in_us and other_cases[4].state == "IL":
         ${ other_cases[4].county } County
         % else:  
@@ -2701,9 +2698,9 @@ attachment:
         % else:  
         ${""}
         % endif
-    - "other_case_number_5": ${ other_cases[5].name.text if other_cases.number > 5 else "" }
+    - "other_case_number_5": ${ other_cases[5].name.text if other_cases.number() > 5 else "" }
     - "other_case_state_5": |
-        % if other_cases.number > 5:
+        % if other_cases.number() > 5:
         % if other_cases[5].in_us:
         ${state_name(other_cases[5].state)}
         % else:  
@@ -2713,7 +2710,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_5": |
-        % if other_cases.number > 5:
+        % if other_cases.number() > 5:
         % if other_cases[5].in_us and other_cases[5].state == "IL":
         ${ other_cases[5].county } County
         % else:  
@@ -2722,9 +2719,9 @@ attachment:
         % else:  
         ${""}
         % endif
-    - "other_case_number_6": ${ other_cases[6].name.text if other_cases.number > 6 else "" }
+    - "other_case_number_6": ${ other_cases[6].name.text if other_cases.number() > 6 else "" }
     - "other_case_state_6": |
-        % if other_cases.number > 6:
+        % if other_cases.number() > 6:
         % if other_cases[6].in_us:
         ${state_name(other_cases[6].state)}
         % else:  
@@ -2734,7 +2731,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_6": |
-        % if other_cases.number > 6:
+        % if other_cases.number() > 6:
         % if other_cases[6].in_us and other_cases[6].state == "IL":
         ${ other_cases[6].county } County
         % else:  
@@ -2743,9 +2740,9 @@ attachment:
         % else:  
         ${""}
         % endif
-    - "other_case_number_7": ${ other_cases[7].name.text if other_cases.number > 7 else "" }
+    - "other_case_number_7": ${ other_cases[7].name.text if other_cases.number() > 7 else "" }
     - "other_case_state_7": |
-        % if other_cases.number > 7:
+        % if other_cases.number() > 7:
         % if other_cases[7].in_us:
         ${state_name(other_cases[7].state)}
         % else:  
@@ -2755,7 +2752,7 @@ attachment:
         ${ "" }    
         % endif 
     - "other_case_il_county_7": |
-        % if other_cases.number > 7:
+        % if other_cases.number() > 7:
         % if other_cases[7].in_us and other_cases[7].state == "IL":
         ${ other_cases[7].county } County
         % else:  
@@ -3665,27 +3662,27 @@ review:
     button: |
       **${ users[1].name_full() }'s address:**[NEWLINE]
       ${ users[1].address.on_one_line(bare=True) }
-    show if: add_co_guardian and valid_co  
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing 
   - Edit: users[1].job
     button: |
       **What is ${ users[1].name_full() }'s current job?**
       ${users[1].job}
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].is_disabled
     button: |
       **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
       ${ word(yesno(users[1].is_disabled))}
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].found_negligent
     button: |
       **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].has_felony_conviction
     button: |
       **Does ${ users[1].name_full() } have any felony convictions?**
       ${ word(yesno(users[1].has_felony_conviction)) }
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].felony_convictions.revisit
     button: |
       **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
@@ -3693,7 +3690,7 @@ review:
       % for conviction in users[1].felony_convictions:
       * Date: ${conviction.date}, Charge: ${ conviction.name.text }
       % endfor
-    show if: add_co_guardian and valid_co and users[1].has_felony_conviction
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_felony_conviction
   - Edit: users[1].phone_number
     button: |
       **${ users[1].name_full() }'s phone number:**
@@ -3702,17 +3699,17 @@ review:
       % else:
       ${ phone_number_formatted(users[1].phone_number) }
       % endif
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].has_email_address
     button: |
       **Does ${ users[1].name_full() }'s have an email address?**
       ${ word(yesno(users[1].has_email_address)) }
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].email
     button: |
       **${ users[1].name_full() }'s email:**
       ${ users[1].email }
-    show if: add_co_guardian and valid_co and users[1].has_email_address    
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_email_address    
   - Edit: oath_person_agree
     button: |
       **Do all proposed guardians agree to the terms of guardianship of the person?**
@@ -4561,27 +4558,27 @@ review:
     button: |
       **${ users[1].name_full() }'s address:**[NEWLINE]
       ${ users[1].address.on_one_line(bare=True) }
-    show if: add_co_guardian and valid_co  
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing 
   - Edit: users[1].job
     button: |
       **What is ${ users[1].name_full() }'s current job?**
       ${users[1].job}
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].is_disabled
     button: |
       **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
       ${ word(yesno(users[1].is_disabled))}
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].found_negligent
     button: |
       **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].has_felony_conviction
     button: |
       **Does ${ users[1].name_full() } have any felony convictions?**
       ${ word(yesno(users[1].has_felony_conviction)) }
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].felony_convictions.revisit
     button: |
       **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
@@ -4589,7 +4586,7 @@ review:
       % for conviction in users[1].felony_convictions:
       * Date: ${conviction.date}, Charge: ${ conviction.name.text }
       % endfor
-    show if: add_co_guardian and valid_co and users[1].has_felony_conviction
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_felony_conviction
   - Edit: users[1].phone_number
     button: |
       **${ users[1].name_full() }'s phone number:**
@@ -4598,17 +4595,17 @@ review:
       % else:
       ${ phone_number_formatted(users[1].phone_number) }
       % endif
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].has_email_address
     button: |
       **Does ${ users[1].name_full() }'s have an email address?**
       ${ word(yesno(users[1].has_email_address)) }
-    show if: add_co_guardian and valid_co
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].email
     button: |
       **${ users[1].name_full() }'s email:**
       ${ users[1].email }
-    show if: add_co_guardian and valid_co and users[1].has_email_address    
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_email_address    
   
   - Edit: oath_person_agree
     button: |
