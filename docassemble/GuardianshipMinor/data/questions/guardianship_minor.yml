@@ -127,7 +127,8 @@ code: |
     spouse.agrees
     if not spouse.address.known:
       spouse.notice_by_publication
-    spouse.notice_relationship = "Spouse"
+    spouse.notice_relationship = "other"
+    spouse.other_notice_relationship = "Minor's spouse"
     if spouse.knows_delivery_method:
       spouse.hand_delivery
       spouse.delivery_date
@@ -1173,6 +1174,7 @@ code: |
     
     return temp_list
 ---
+# consent only for Yes agrees not idk - change?
 code: |
   def any_consent():
 
@@ -1873,14 +1875,10 @@ question: |
 subquestion: |
   Since ${child.name_full()} is at least 14 years old, they can participate in the court case.
   
-  If ${child.name_full()} agrees to the guardianship, they can fill out Nomination. You can download the Nomination form at the end of this program.
-  
-  If they do not agree, or if you do not know, you will have to send them notice of the guardianship. 
-  
-  If you do not know, select **No**.
+  If ${child.name_full()} agrees to the guardianship, they can fill out a *Nomination of Guardian by Minor* form. You can download the Nomination form at the end of this program.
 fields:
   - "Does ${child.name_full()} agree to the guardianship?": child.agrees
-    datatype: yesnoradio
+    datatype: yesnomaybe
 ---
 id: consent info
 generic object: ALIndividual
@@ -2321,7 +2319,7 @@ objects:
   - oath_and_bond: ALDocument.using(title="Oath and Bond of Guardian", filename="oath_of_guardian.pdf", has_addendum=False)
   - oath_and_bond_co_guardian: ALDocument.using(title="Oath and Bond of Co-Guardian", filename="oath_of_co_guardian.pdf", has_addendum=False)
   - consent: ALDocument.using(title="Consent and Appearance (optional, use one for each adult who agrees)", filename="consent_and_appearance.pdf", has_addendum=False)
-  - nomination: ALDocument.using(title="Nomination", filename="nomination.pdf", has_addendum=False)
+  - nomination: ALDocument.using(title="Nomination (optional)", filename="nomination.pdf", has_addendum=False)
   - notice: ALDocument.using(title="Notice of hearing", filename="notice.pdf", has_addendum=False)
   - additional_proof_of_delivery: ALDocument.using(title="Additional Proof of Delivery", filename="additional_proof_of_delivery.pdf", has_addendum=False)
   - statement: ALDocument.using(title="Statement for newspaper publication (optional, use one for each adult who can't be found)", filename="statement_for_publication.pdf", has_addendum=False)    
@@ -2391,6 +2389,7 @@ code: |
     consent.enabled = True
 
   if child.age_in_years() >= 14:
+    # consent only for Yes agrees not idk
     if child.agrees:
       nomination.enabled = True
 
