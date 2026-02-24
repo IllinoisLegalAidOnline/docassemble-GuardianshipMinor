@@ -255,7 +255,7 @@ question: |
 subquestion: |
   Welcome to Illinois Legal Aid Online's **Guardianship of a minor** Easy Form.
 
-  This program helps you make a *${ form_name }* to **UPDATE**.
+  This program helps you make a *${ form_name }*. Use it if you want to be the court-ordered guardian of a minor child (under the age of 18). If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
   
   To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 field: sees_nav_bar
@@ -269,9 +269,9 @@ subquestion: |
   
   Information you will need to fill out the forms:
 
-  * Name,birth date, and address of the minor,
-  * Names and addresses of the minor’s nearest relatives and the person who has custody of the minor,
-  * Approximate value of minor’s estate (property) and annual income from all sources,
+  * Name, birthdate, and address of the minor child,
+  * Names and addresses of the minor's nearest relatives and the person who has custody of the minor,
+  * Approximate value of minor's estate (property) and annual income from all sources,
   * Your name, address, age, occupation, telephone, email address, and criminal history (and of the co-guardian, if any),
   * Details about other court cases involving the minor and their parents,
   * Information about the parents, such as most recent contact with minor, reasons why they are unable to care for the minor, or date of death, and
@@ -294,38 +294,40 @@ continue button field: basic_info
 question: |
   About guardianship of a child
 subquestion: |
-  **UPDATE**
+  Usually, only the parents of a minor child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a guardian to care for and make decisions for the child.
 
-  Explain what it means to get guardianship of a child.
+  A guardian of the **person** is responsible for the dhild's:
 
-  Duties, types (person, estate, both), process
+  * Safety,
+  * Physical and emotional well-being,
+  * Housing,
+  * Education,
+  * Nutrition, and
+  * Medical care.
+  
+  A guardian of the **estate** is responsible for the care, management, and investment of the child's money and property.
 
-  Link to STG? or other forms of guardianship or other ILAO content?
+  A judge can appoint a guardian of the person, the estate, or both. They can also appoint another person to be a co-guardian with the guardian.
 
-  ADD info about this program is designed to be used by the person who wants to become guardian.
-
+  **Note:** In Illinois, there are also standby and short-term guardianships. Each kind of guardianship has different requirements and responsibilities. To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 ---
 id: whats next
 continue button field: whats_next
 question: |
   After you finish this program
 subquestion: |
-  **UPDATE**
+  Once you download your forms, you must file them with the court. This program **does not file** your forms for you. When you file your forms, you will get a date for a court hearing where a judge will review your case.
+
+  After you filed the *${ form_name }*, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
+
+  Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
-  After you download your forms, you must file them with the court. This program **does not file** your forms for you.
-  
-  You may need to schedule a court date for when the judge will hear your motion. The scheduling process is different depending on your location and case type. Check with your local circuit clerk for how to schedule a motion hearing.
-  
-  Finally, you will need to send your *Motion* and *Notice of Court Date for Motion* forms to the other parent.
-  
-  To learn more, read the instructions you can download at the end of this program. 
+  **Note:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. To learn more, read the instructions you can download at the end of this program. 
 ---
 id: user qualified to be guardian
 question: |
   Do you meet the legal requirements to ask for guardianship of a child?
 subquestion: |
-  UPDATE
-
   To ask the court to be appointed guardian of a child, you must:
 
   * Be at least 18 years old,
@@ -346,8 +348,14 @@ question: |
 subquestion: |
   Based on your answers, you do not meet the basic requirements to be appointed guardian of a child.
 
-  UPDATE
-  
+  To ask the court to be appointed guardian of a child, you must:
+
+  * Be at least 18 years old,
+  * Live in the United States,
+  * Be of sound mind,
+  * Not be under a court-ordered guardianship yourself, and
+  * Not have a felony conviction that involves harm or threat to a minor.
+
   Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
   - Exit: exit
@@ -414,7 +422,7 @@ id: previous standby guardianship
 question: |
   Has a judge appointed a standby guardian for ${child.name_full()}?
 subquestion: |
-  A court can appoint a person as a standby guardian. That person will become the guardian once the parents or current guardian are no longer able to care for the minor.
+  A court can appoint a person as a **standby guardian**. That person will become the guardian once the parents or current guardian are no longer able to care for the minor.
 
   **Note:** If a standby guardian was appointed, you will need to attach the court order when you file your *${ form_name }*.
 fields:
@@ -430,7 +438,7 @@ id: current short-term guardianship
 question: |
   Is there a current short-term guardian for ${child.name_full()}?
 subquestion: |
-  Parents can have a written agreement for someone to temporarily be the guardian without any court involvement.
+  Parents can have a written agreement for someone to temporarily be the guardian without any court involvement. This is called a **short-term guardianship**.
 
   **Note:** If a short-term guardian was appointed, you will need to attach the written agreement when you file your *${ form_name }*.
 fields:
@@ -664,31 +672,6 @@ content: |
   * Cannot be located, or
   * Is unable or unwilling to take care of ${child.name_full()}.
 ---
-#code: |
-#  if parents.number() >= 2:
-#    parents.there_is_another = False
----
-#reconsider: True
-#code: |
-#  if has_legal_parent:
-#    if parents[0].address.known:
-#      if parents[0].lives_with_child:
-#        parents[0].address.address = child.address.address
-#        parents[0].address.unit = child.address.unit
-#        parents[0].address.city = child.address.city
-#        parents[0].address.state = child.address.state
-#        parents[0].address.zip = child.address.zip
-#    	if has_second_parent:
-#        if parents[1].address.known:
-#          if parents[1].lives_with_child:
-#            parents[1].address.address = child.address.address
-#            parents[1].address.unit = child.address.unit
-#            parents[1].address.city = child.address.city
-#            parents[1].address.state = child.address.state
-#            parents[1].address.zip = child.address.zip
-#
-#  parent_child_same_address_check = True
----
 code: |
   def get_parent_address(parent, child):
     if parent.lives_with_child:
@@ -703,7 +686,19 @@ id: another court case that involves parents
 question: |
   Do you know of any court cases that involve ${child.name_full()} or their parents?
 subquestion: |
-  This includes adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US on your forms.
+  This includes:
+  
+  * Adoption,
+  * Divorce,
+  * Custody,
+  * Parentage,
+  * child support,
+  * Orders of Protection,
+  * Juvenile,
+  * DCFS, and
+  * Guardianship cases.
+  
+  You must list all cases from anywhere inside or outside the US on your forms.
 fields:
   - no label: other_case_involving_parents
     datatype: yesnoradio
@@ -717,8 +712,6 @@ id: info about first other case
 question: |
   Information about another case
 subquestion: |
-  This includes adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US.
-
   This information should be found on the court papers from the other case. If you do not have the court papers, you may be able to find the case information online. To learn more, read ILAO's article about [how to access court records](https://www.illinoislegalaid.org/node/33186).
 fields:
   - Case number: other_cases[0].name.text
@@ -747,8 +740,6 @@ id: info about other cases
 question: |
   Information about a ${ ordinal(i) } other case
 subquestion: |
-  This includes adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US on your forms.
-
   This information should be found on the court papers from the other case. If you do not have the court papers, you may be able to find the case information online. To learn more, read ILAO's article about [how to access court records](https://www.illinoislegalaid.org/node/33186).
 fields:
   - Case number: other_cases[i].name.text
@@ -789,7 +780,19 @@ subquestion: |
 
   The forms have room for up to eight cases.
 
-  You only need to include adoption, divorce, custody, parentage, child support, orders of protection, juvenile, DCFS, and guardianship cases. You must list all cases from anywhere inside or outside the US on your forms.  
+  You only need to include:
+  
+  * Adoption,
+  * Divorce,
+  * Custody,
+  * Parentage,
+  * child support,
+  * Orders of Protection,
+  * Juvenile,
+  * DCFS, and
+  * Guardianship cases.
+  
+  You must list all cases from anywhere inside or outside the US on your forms. 
 fields:
   - "Any other cases?": other_cases.there_is_another
     datatype: yesnoradio
@@ -802,7 +805,7 @@ id: any caregivers
 question: |  
   Are there any adults that live with ${ child.name_full()}?
 subquestion: | 
-  These would be adults that live with ${ child.name_full()} at ${ child.address.on_one_line(bare=True)}.
+  You said ${ child.name_full()} lives at ${ child.address.on_one_line(bare=True)}.
 
   % if parent_lives_with_child():
   You already told us about:
@@ -1856,15 +1859,11 @@ generic object: ALIndividual
 question: |
   Does ${x.name_full()} agree to the guardianship of ${ child.name_full()}?
 subquestion: |
-  If ${x.name_full()} agrees to the guardianship, they will have to sign a CONSENT and APPEARANCE form that they can file with the court. Alternatively, they can give their consent in court.
+  If ${x.name_full()} agrees to the guardianship, they can sign a *Consent to Guardianship of Minor and Appearance* in front of a notary and file it with the court. Alternatively, they can give their consent in court.
+      
+  **Note:** The judge can appoint a guardian even if ${x.name_full()} does not agree.
 
-  If they do not agree, or if you do not know, you will have to send them notice of the guardianship. 
- 
-  UPDATE: The Consent & Appearance must be signed in front of a notary public, filed. You can download a form that you can give them at the end of this program.
-
-  **Note:** UPDATE Be sure that they agree. If they do not agree and file a CONSENT, you will have to give them notice of the guardianship some other way.
-
-  UPDATE - If you do not know, select **No**.
+  You can download the *Consent to Guardianship of Minor and Appearance* form at the end of this program.
 fields:
   - "Does ${x.name_full()} agree to the guardianship?": x.agrees
     datatype: yesnomaybe
@@ -1886,13 +1885,9 @@ continue button field: x.consent_info
 question: |
   Consent and Appearance form information
 subquestion: |
-  Since you said that ${x.name_full() } agrees to the guardianship, they will have to sign a CONSENT and APPEARANCE form that you file with your Petition. Alternatively, they can give their consent in court.
+  Since you said that ${x.name_full() } agrees to the guardianship, they can sign a *Consent to Guardianship of Minor and Appearance* in front of a notary and file it with the court. Alternatively, they can give their consent in court.
 
-  UPDATE: The Consent & Appearance must be signed in front of a notary public, filed
-
-  **Note:** Be sure that they agree. If they do not agree and file a CONSENT, you will have to give them notice of the guardianship some other way.  
-
-  You can download the form at the end of this program.
+  You can download the *Consent to Guardianship of Minor and Appearance* form at the end of this program.
 ---
 depends on:
   - trial_court_index
@@ -2069,11 +2064,15 @@ question: |
 subquestion: |
   If you do not know ${x.name_full()}'s address now, you an add it to your forms later. They must receive notice of the guardianship at least **7 days** before the court hearing.
   
-  If you cannot find ${x.name_full()}'s address, you will have to give them notice of the guardianship by publishing in a newspaper.
+  If you cannot find ${x.name_full()}'s address to notify them in person or by mail, you will have to give them notice of the guardianship by publishing in a newspaper. You can use a *Statement in Support of Notice by Publication* to show the judge that you tried to find them.
 
-  EXPLAIN You will need to show the judge that you tried to find them by filling out a STATEMENT.
+  In some counties, the Circuit Clerk will send the case information to the newspaper. Ask the Circuit Clerk about the process in your county. If you need to provide the information to the newspaper, use the Minor Guardianship Publication Information for Newspaper form.
+  
+  The newspaper must print the notice at least once a week for three weeks in a row. The date it is first published must be at least 30 days before the court date. In order to prevent a problem, get a court date at least 45 days later. That will give the newspaper 15 days to get the first notice published.
 
-  EXPLAIN To give notice by newspaper, the process is X, Y, Z and must run for # of weeks.
+  If you receive a Certificate of Publication from the newspaper, file the Certificate with the Clerk.
+
+  You can download the forms you need at the end of this program, along with instructions that will explain the process.
 continue button field: x.notice_by_publication
 ---
 id: filing intro
@@ -2125,18 +2124,20 @@ code: |
 id: notice intro
 continue button field: notice_intro
 question: |
-  Notify parents and relatives of guardianship
+  Notify parents and relatives of the guardianship
 subquestion: |
-  UPDATE with info from instructions
+  The following people must receive a copy of the *{ form_name }* and Notice of the court date:
+  
+  * The child's spouse, if they are married,
+  * If the minor is not married, the child's parents, adult brothers and sisters, and short-term guardian, if any,
+  * If the child has none of the above relatives, then the adult relatives who are most closely related to the minor (for example, grandparents, aunts, and uncles), and
+  * The child if they are age 14 or older.
 
-  Must give notice to these people. INCLUDE minor if age 14+.
+  Notice is done differently depending on where you file. Usually you can deliver in person or send by certified mail.
 
-  Notice is done differently depending on where you file. Usually deliver in person or send by certified mail. Must be given notice seven days before hearing. If you do not know address of people, you will have to post notice in newspaper.
+  If any parents or relatives agree to the guardianship, they can sign a *Consent to Guardianship of Minor and Appearance*. They will need to sign the form in front of a notary, and they must file it with the court. A consent is not required, and the judge can appoint a guardian even if there is no consent.
 
-  If any parents or relatives agree to the guardianship, they can sign a CONSENT & APPEARANCE form. If they do & file with court, then you do not need to give them notice.
-
-  The next screens will ask questions that will help you figure out who needs to be informed and how you can give them notice or get their consent. At the end of this program, you can download forms and instructions to guide you through the next steps.
-
+  The next screens will ask questions that will help you figure out who needs to be informed and how you can give them notice or get their consent. At the end of this program, you can download the required forms and instructions to guide you through the next steps.
 ---
 id: hearing scheduled
 question: |
