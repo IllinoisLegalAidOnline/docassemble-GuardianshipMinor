@@ -193,14 +193,13 @@ code: |
       child.hand_delivery
       child.delivery_date
   
-  hand_delivery_info
-
   courthouse_info
   if trial_court_index == -1:
     cook_district
   if has_court_date:
     hearing_date
   attend_court
+  hand_delivery_info
   e_signature
   next_steps
   
@@ -309,7 +308,19 @@ subquestion: |
 
   A judge can appoint a guardian of the person, the estate, or both. They can also appoint another person to be a co-guardian with the guardian.
 
+  ${ collapse_template(ending_guardianship_help) }  
+
   **Note:** In Illinois, there are also standby and short-term guardianships. Each kind of guardianship has different requirements and responsibilities. To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
+---
+template: ending_guardianship_help
+subject: |
+  **How can a court-ordered minor guardianship end?**
+content: |
+  A court-ordered minor guardianship can end in the following ways:  
+
+  * A minor guardianship automatically ends when the minor turns 18.
+  * A minor’s parent may ask the judge to end the guardianship before the minor turns 18. The parent will be required to show how things have changed since the guardianship was entered. The guardians will have an opportunity to respond and to show if ending the guardianship would not be in the minor’s best interests.
+  * A guardian can ask the court to end the guardianship before the minor turns 18.
 ---
 id: whats next
 continue button field: whats_next
@@ -318,7 +329,7 @@ question: |
 subquestion: |
   Once you download your forms, you must file them with the court. This program **does not file** your forms for you. When you file your forms, you will get a date for a court hearing where a judge will review your case.
 
-  After you filed the *${ form_name }*, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
+  After you filed the *${ form_name }* and get a court date, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
 
   Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
@@ -365,7 +376,7 @@ id: child birthdate
 question: |
   When was ${child.name_full()} born?
 subquestion: |
-  **Note:** If the child is undocumented and under 21, speak to an immigration lawyer to see if the minor is eligible for Special Immigrant Juvenile Status before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+  **Note:** If the child is undocumented and under 21, speak to an immigration lawyer to see if the minor is eligible for **[Special Immigrant Juvenile Status](https://www.uscis.gov/working-in-US/eb4/SIJ)** before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 fields:
   - Birthdate: child.birthdate
     datatype: BirthDate
@@ -1267,25 +1278,13 @@ id: next steps
 question: |
   Next steps
 subquestion: |
-  UPDATE
+  After you download your forms, you must file them with the court. This program **does not file** your forms for you. When you file your forms, you will get a date for a court hearing where a judge will review your case.
 
-  Notice parties (NOT INCLUDING LAST ADULT RELATIVE WHY):
+  Once you filed the *${ form_name }* and get a court date, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
 
-  % for party in get_notice_parties():
-  * ${party.name_full()}, ${party.relationship}
-  % endfor
-
-  Caregivers:
-
-  % for person in caregivers:
-  * ${person.name_full()}, ${person.relationship}
-  % endfor
-
-  Adult relatives:
+  Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
-  % for adult in adult_relatives:
-  * ${adult.name_full()}, ${adult.relationship}
-  % endfor
+  **Reminder:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. To learn more, read the instructions you download on an upcoming screen. 
  
 continue button field: next_steps
 ---
@@ -1299,6 +1298,8 @@ subquestion: |
   The next screens will ask questions about you, the person who wants to be ${child.name_full()}'s guardian. If you want the court to appoint a co-guardian, you can enter their information as well.
 
   **Note:** You may have entered some of this information already if you live with or are related to ${child.name_full()}. It is important that it is included in both places.
+
+  Then we will go over the responsibilities of being appointed a court-ordered guardian.
 ---
 id: user name
 sets:
@@ -1494,7 +1495,7 @@ fields:
 ---
 template: felony_conviction_help
 subject: |
-  **What will the judge consider?**
+  **What a judge considers when looking at felony convictions**
 content: |  
   A person with a felony conviction that involves harm or threat to a minor cannot be appointed guardian of a minor.
   
@@ -1748,12 +1749,19 @@ continue button field: oath_intro
 question: |
   Oath required for guardianship
 subquestion: |
-  UPDATE
-  Explain next screens will lay out terms of G of P and/or Estate
+  % if valid_co_guardian():
+  To become a guardian of ${ child.name_full() }, you and ${ users[1].name_full() } must promise to fulfill the duties of a guardian and co-guardian.
+  % else:
+  To become a guardian of ${ child.name_full() }, you must promise to fulfill the duties of a guardian.
+  % endif
 
-  If ESTATE then BOND - see instructions
-
-  Download form, IF CO-GUARDIAN E-SIGN Oath, & bring to court
+  % if guardianship_type != "person":
+  Since you are asking to become guardian of ${ child.name_full() }'s estate, you will need to post a bond.
+  
+  A bond is a financial guarantee that you will manage the ${ child.name_full() }'s property in their best interests. The judge will tell you the bond type and amount. 
+  % endif
+  
+  You can download the Oath forms at the end of the program.
 ---
 id: oath person check
 question: |
@@ -1764,13 +1772,15 @@ question: |
   % endif
 subquestion: |
   % if valid_co_guardian():
-  UPDATE You and ${ users[1].name_full() }:
+  This means you and ${ users[1].name_full() } both understand that:
   % else:
-  UPDATE You:
+  This means you understand that:
   % endif
 
-  TERMS of guardianship PERSON
-
+  * You are responsible for the health, welfare, and education of ${ child.name_full() }.
+  * You must notify the court and ${ child.name_full() }'s parents of any change in your address or the address of ${ child.name_full() } within 30 days of the change.
+  * You must get permission from the judge before moving out of state with ${ child.name_full() } or traveling with ${ child.name_full() } outside the state for more than 30 days.
+  * You cannot transfer custody of ${ child.name_full() } to anyone, including ${ child.name_full() }'s parents, without permission from the judge. You will file any reports the judge requires.  
 fields:
   - no label: oath_person_agree
     datatype: yesnoradio
@@ -1784,13 +1794,15 @@ question: |
   % endif
 subquestion: |
   % if valid_co_guardian():
-  UPDATE You and ${ users[1].name_full() }:
+  This means you and ${ users[1].name_full() } both understand that:
   % else:
-  UPDATE You:
+  This means you understand that:
   % endif
 
-  TERMS of guardianship ESTATE
-
+  * You are responsible for the care, management, and investment of ${ child.name_full() }'s estate.
+  * You must keep records of ${ child.name_full() }'s income, assets, and expenditures, and you may be required to file periodic reports with the court.
+  * You must appear on behalf of ${ child.name_full() } in any legal proceeding regarding ${ child.name_full() }.
+  * You must notify the court and ${ child.name_full() }'s parents of any change in your address or the address of ${ child.name_full() } within 30 days of the change.
 fields:
   - no label: oath_estate_agree
     datatype: yesnoradio
@@ -1801,12 +1813,10 @@ question: |
   Sorry
 subquestion: |
   % if valid_co_guardian():
-  UPDATE You and ${ users[1].name_full() } must
+  You and ${ users[1].name_full() } must agree to the terms of guardianship to be appointed by the court.
   % else:
-  UPDATE You must
+  You must agree to the terms of guardianship to be appointed by the court.
   % endif
-  
-  USE logic to include info about person & estate & both - or separate screens?
 
   Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
@@ -1818,9 +1828,15 @@ continue button field: bond_info
 question: |
   Bond required for guardianship of estate
 subquestion: |
-  UPDATE
-
-  Explain process and guess at amount based on minor info
+  % if valid_co_guardian():
+  A bond is a financial guarantee that you and ${ users[1].name_full() } will manage the ${ child.name_full() }'s property in their best interests.
+  % else:
+  A bond is a financial guarantee that you will manage the ${ child.name_full() }'s property in their best interests.
+  % endif
+  
+  There are different types of bonds. The bond amount is usually around 1.5 to two times the value of ${ child.name_full() }'s estate. 
+  
+  The judge will tell you the amount and type of bond required.
 ---
 code: |
   def valid_co_guardian():
@@ -1836,9 +1852,9 @@ code: |
 id: notice relationship
 generic object: ALPeopleList
 question: |
-  Choose a relationship for Notice
+  Choose a relationship for Notice form
 subquestion: |
-  The Notice court forms ask for different information than the *${ form_name}*.
+  The *Notice of Hearing on Petition for Guardianship of a Minor* form ask for different information than the *${ form_name}*.
 
   You told us that ${x[i].name_full()} is ${ child.name_full()}'s ${x[i].relationship}. Pick the option that fits.
 fields:
@@ -1927,7 +1943,7 @@ question: |
 subquestion: |
   ${ collapse_template(delivery_method_help) }  
 
-  You must deliver the *Petition for Guardianship of a Minor* and the *Notice of Hearing* at least 7 days before the court date. You must use the options below to deliver documents. You cannot use email. 
+  You must deliver the *Petition for Guardianship of a Minor* and the *Notice of Hearing* at least **7 days** before the court date. You must use the options below to deliver documents. You cannot use email. 
 
   If you do not know this now, you can add it to the Proof of Delivery section of your forms later.
 fields:
@@ -2020,7 +2036,7 @@ generic object: ALIndividual
 question: |
   When will you send your forms to ${ x.name_full() }?
 subquestion: |
-  **Remember:** You must send the *Petition for Guardianship of a Minor* and the *Notice of Hearing* at least 7 days before the court date.
+  **Remember:** You must send the *Petition for Guardianship of a Minor* and the *Notice of Hearing* at least **7 days** before the court date.
 
   If you do not know this now, be sure to add it to your forms later.
 fields:
@@ -2046,12 +2062,10 @@ id: hand delivery info
 continue button field: hand_delivery_info
 question: |
   Check the Proof of Delivery section of your forms
-subquestion: |
-  UPDATE this page and the package with a NEW .png snip from the guardianship Notice
-  
+subquestion: |  
   **Don't forget!** Make sure you review and complete the Proof of Delivery section of your forms. 
   
-  [FILE proof_of_delivery_snip_sep_2025.png, 100%, Proof of Delivery section of forms]
+  [FILE guardianship_delivery.png, 100%, Proof of Delivery section of forms]
 
   **Instructions when delivering your forms by hand:**
 
@@ -2061,12 +2075,10 @@ id: notice options for unknown address
 generic object: ALIndividual
 question: |
   Notice by publication
-subquestion: |
-  If you do not know ${x.name_full()}'s address now, you an add it to your forms later. They must receive notice of the guardianship at least **7 days** before the court hearing.
-  
+subquestion: |  
   If you cannot find ${x.name_full()}'s address to notify them in person or by mail, you will have to give them notice of the guardianship by publishing in a newspaper. You can use a *Statement in Support of Notice by Publication* to show the judge that you tried to find them.
 
-  In some counties, the Circuit Clerk will send the case information to the newspaper. Ask the Circuit Clerk about the process in your county. If you need to provide the information to the newspaper, use the Minor Guardianship Publication Information for Newspaper form.
+  How you ask a newspaper to publish notice of the guardianship varies. In some counties, the Circuit Clerk will send the case information to the newspaper. Ask the Circuit Clerk about the process in your county. If you need to provide the information to the newspaper, use the *Minor Guardianship Publication Information for Newspaper* form.
   
   The newspaper must print the notice at least once a week for three weeks in a row. The date it is first published must be at least 30 days before the court date. In order to prevent a problem, get a court date at least 45 days later. That will give the newspaper 15 days to get the first notice published.
 
@@ -2080,16 +2092,13 @@ continue button field: filing_intro
 question: |
   Filing your forms and next steps
 subquestion: |
-  Next screens will help prepare your forms for filing. They will also explain the next steps. More information can be found in the instructions you can download at the end of this program.
-
-  IF MINOR >=14:
-  Must be notified or consent. They can also nominate. Next screens will help you make the right forms.
+  The next screens will help prepare your forms for filing. They will also explain the next steps. More information can be found in the instructions you can download at the end of this program.
+  % if child.age_in_years() >= 14:
   
-  Notice is done differently depending on where you file. Usually you can deliver in person or send by certified mail. Must be given notice seven days before hearing. If you do not know address of people, you will have to post notice in newspaper.
-
-  If any parents or relatives agree to the guardianship, they can sign a CONSENT & APPEARANCE form. If they do & file with court, then you do not need to give them notice.
-
-
+  Since ${child.name_full()} is at least 14 years old, they can participate in the court case.
+  
+  If ${child.name_full()} agrees to the guardianship, they can fill out a *Nomination of Guardian by Minor* form. You can download the Nomination form at the end of this program.
+  % endif
 ---
 id: filing county
 question: |
