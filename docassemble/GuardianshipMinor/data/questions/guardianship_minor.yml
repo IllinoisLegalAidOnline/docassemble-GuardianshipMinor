@@ -89,7 +89,7 @@ code: |
       parents[0].address.known = False
     else:
       if parents[0].address.known:
-        get_parent_address(parents[0], child)
+        get_address(parents[0], child)
       else:
         parents[0].notice_by_publication
       parents[0].notice_relationship = "parent"  
@@ -106,7 +106,7 @@ code: |
         parents[1].address.known = False
       else:
         if parents[1].address.known:
-          get_parent_address(parents[1], child)
+          get_address(parents[1], child)
         else:
           parents[1].notice_by_publication  
         parents[1].notice_relationship = "parent"  
@@ -118,13 +118,13 @@ code: |
   
   if other_case_involving_parents:
     other_cases.gather()
-  if caregivers.there_are_any:
-    caregivers.gather()
   if minor_is_married:
     spouse.name.first
     spouse.relationship = "Spouse"
-    spouse.address.known
-    spouse.agrees
+    if spouse.address.known:
+      get_address(spouse, child)
+    if spouse.agrees:
+      spouse.consent_info
     if not spouse.address.known:
       spouse.notice_by_publication
     spouse.notice_relationship = "other"
@@ -132,7 +132,9 @@ code: |
     if spouse.knows_delivery_method:
       spouse.hand_delivery
       spouse.delivery_date
-  else:
+  if caregivers.there_are_any:
+    caregivers.gather()
+  if not minor_is_married:
     if adult_relatives.there_are_any:
       adult_relatives.gather()
   
@@ -254,7 +256,9 @@ question: |
 subquestion: |
   Welcome to Illinois Legal Aid Online's **Guardianship of a minor** Easy Form.
 
-  This program helps you make a *${ form_name }*. Use it if you want to be the court-ordered guardian of a minor child (under the age of 18). If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
+  This program helps you make a *${ form_name }*. Use it if you want to be the court-ordered guardian of a minor child (under the age of 18). This is called a **{plenary guardian}**. You can also use it if you want the court to appoint a co-guardian along with you.
+  
+  **Note:** If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
   
   To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 field: sees_nav_bar
@@ -264,9 +268,7 @@ continue button field: how_to_use
 question: |
   Instructions
 subquestion: |
-  **UPDATE**
-  
-  Information you will need to fill out the forms:
+  To fill out the forms, you will need to know:
 
   * Name, birthdate, and address of the minor child,
   * Names and addresses of the minor's nearest relatives and the person who has custody of the minor,
@@ -288,12 +290,21 @@ subject: |
 content: |  
   This is an example of help. Click again to hide.
 ---
+terms:
+  - "plenary guardian": |
+      A **plenary guardian** is a long-term, permanent guardian. Once someone is appointed a plenary guardian, they cannot give up the responsibility, unless a judge rules that:
+
+      * A parent can care for the child again, or
+      * Someone else is willing to become the guardian.
+
+      The guardianship ends automatically when the child turns 18.
+---
 id: basic guardianship info
 continue button field: basic_info
 question: |
   About guardianship of a child
 subquestion: |
-  Usually, only the parents of a minor child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a guardian to care for and make decisions for the child.
+  Usually, only the parents of a minor child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a **{plenary guardian}** to care for and make decisions for the child.
 
   A guardian of the **person** is responsible for the dhild's:
 
@@ -319,7 +330,7 @@ content: |
   A court-ordered minor guardianship can end in the following ways:  
 
   * A minor guardianship automatically ends when the minor turns 18.
-  * A minor’s parent may ask the judge to end the guardianship before the minor turns 18. The parent will be required to show how things have changed since the guardianship was entered. The guardians will have an opportunity to respond and to show if ending the guardianship would not be in the minor’s best interests.
+  * A minor's parent may ask the judge to end the guardianship before the minor turns 18. The parent will be required to show how things have changed since the guardianship was entered. The guardians will have an opportunity to respond and to show if ending the guardianship would not be in the minor's best interests.
   * A guardian can ask the court to end the guardianship before the minor turns 18.
 ---
 id: whats next
@@ -333,7 +344,7 @@ subquestion: |
 
   Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
-  **Note:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. To learn more, read the instructions you can download at the end of this program. 
+  **Note:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local circuit clerk for details. To learn more, read the instructions you can download at the end of this program. 
 ---
 id: user qualified to be guardian
 question: |
@@ -376,7 +387,7 @@ id: child birthdate
 question: |
   When was ${child.name_full()} born?
 subquestion: |
-  **Note:** If the child is undocumented and under 21, speak to an immigration lawyer to see if the minor is eligible for **[Special Immigrant Juvenile Status](https://www.uscis.gov/working-in-US/eb4/SIJ)** before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+  **Note:** If the child is undocumented and under 21, talk with an immigration lawyer to see if the minor is eligible for **[Special Immigrant Juvenile Status](https://www.uscis.gov/working-in-US/eb4/SIJ)** before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 fields:
   - Birthdate: child.birthdate
     datatype: BirthDate
@@ -684,12 +695,12 @@ content: |
   * Is unable or unwilling to take care of ${child.name_full()}.
 ---
 code: |
-  def get_parent_address(parent, child):
-    if parent.lives_with_child:
-      parent.address = child.address.copy_deep(parent.attr_name('address'))
-      parent.address.known = True
+  def get_address(person, child):
+    if person.lives_with_child:
+      person.address = child.address.copy_deep(person.attr_name('address'))
+      person.address.known = True
     else:
-      parent.address.address
+      person.address.address
     return
  
 ---
@@ -706,7 +717,7 @@ subquestion: |
   * child support,
   * Orders of Protection,
   * Juvenile,
-  * DCFS, and
+  * DCFS (Department of Children & Family Services), and
   * Guardianship cases.
   
   You must list all cases from anywhere inside or outside the US on your forms.
@@ -800,7 +811,7 @@ subquestion: |
   * child support,
   * Orders of Protection,
   * Juvenile,
-  * DCFS, and
+  * DCFS (Department of Children & Family Services), and
   * Guardianship cases.
   
   You must list all cases from anywhere inside or outside the US on your forms. 
@@ -818,21 +829,31 @@ question: |
 subquestion: | 
   You said ${ child.name_full()} lives at ${ child.address.on_one_line(bare=True)}.
 
-  % if parent_lives_with_child():
+  % if parent_lives_with_child() or minor_is_married:
   You already told us about:
 
+  % if parent_lives_with_child():
   % if parents[0].address.known:
   % if parents[0].lives_with_child:
-  * ${ parents[0].name_full()}
+  * ${ parents[0].name_full()}, Parent
   % endif
   % endif
   % if has_second_parent:
   % if parents[1].address.known:
   % if parents[1].lives_with_child:
-  * ${ parents[1].name_full()}
+  * ${ parents[1].name_full()}, Parent
   % endif
   % endif
   % endif
+  % endif
+  % if minor_is_married:
+  % if spouse.address.known:
+  % if spouse.lives_with_child:  
+  * ${ spouse.name_full()}, Spouse
+  % endif  
+  % endif  
+  % endif  
+  
   % endif  
 fields:
   - "Any adults live with ${ child.name_full()}?": caregivers.there_are_any
@@ -873,11 +894,11 @@ question: |
   Who is another adult that lives with ${child.name_full()}?  
   % endif
 subquestion: |
-  % if i>0 or parent_lives_with_child():
+  % if i>0 or parent_lives_with_child() or minor_is_married:
   So far you have told us about:
 
-  % if parents[0].address.known:
   % if parent_lives_with_child():
+  % if parents[0].address.known:
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
@@ -889,7 +910,14 @@ subquestion: |
   % endif
   % endif
   % endif
-  % endif    
+  % endif
+  % if minor_is_married:
+  % if spouse.address.known:
+  % if spouse.lives_with_child:  
+  * ${ spouse.name_full()}, Spouse
+  % endif  
+  % endif  
+  % endif  
   % for x in range(caregivers.number_gathered() - 1):
   * ${caregivers[x].name_full()}, ${caregivers[x].relationship}
   % endfor  
@@ -921,8 +949,8 @@ question: |
 subquestion: |
   So far you have told us about:
 
-  % if  parents[0].address.known:  
   % if parent_lives_with_child():
+  % if parents[0].address.known:  
   % if parents[0].lives_with_child:
   * ${ parents[0].name_full()}, Parent
   % endif
@@ -934,7 +962,14 @@ subquestion: |
   % endif
   % endif
   % endif
-  % endif    
+  % endif
+  % if minor_is_married:
+  % if spouse.address.known:
+  % if spouse.lives_with_child:  
+  * ${ spouse.name_full()}, Spouse
+  % endif  
+  % endif  
+  % endif  
   % for caregiver in caregivers:
   * ${caregiver.name_full()}, ${caregiver.relationship}
   % endfor 
@@ -947,22 +982,27 @@ fields:
     datatype: yesnoradio
 ---
 code: |
-  def number_parents_live_with_child():
-    total_parents = 0
+  def number_others_live_with_child():
+    total_others = 0
   
     if has_legal_parent:
       if parents[0].address.known:  
         if parents[0].lives_with_child:
-    	    total_parents += 1
+    	    total_others += 1
     	if has_second_parent:
         if parents[1].address.known:  
             if parents[1].lives_with_child:
-      	      total_parents += 1
-    return total_parents
+        	    total_others += 1
+    if minor_is_married:
+      if spouse.address.known:
+        if spouse.lives_with_child:
+          total_others += 1  
+
+    return total_others
 
 ---
 code: |
-  if caregivers.number_gathered() >= (4 - number_parents_live_with_child() ):
+  if caregivers.number_gathered() >= (4 - number_others_live_with_child() ):
     caregivers.there_is_another = False
 ---
 id: is minor married
@@ -983,6 +1023,18 @@ fields:
   - code: |
       spouse.name_fields()
 ---
+id: know spouse address
+question: |
+  ${spouse.name_full()}'s current address
+fields:
+  - "Do you know ${spouse.name_full()}'s address?": spouse.address.known
+    datatype: yesnoradio
+  - "Does ${spouse.name_full()} live with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**?": spouse.lives_with_child
+    datatype: yesnoradio
+    show if:
+      variable: spouse.address.known
+      is: True
+---
 id: spouse address
 question: |
   What is ${spouse.name_full()}'s current address?
@@ -998,13 +1050,6 @@ fields:
     default: IL
   - ZIP code: spouse.address.zip
     required: False
-  - "I don't know ${spouse.name_full()}'s address.": spouse.address.known
-    datatype: noyes
-    disable others: True
----
-code: |
-  if spouse.number_gathered() == 1:
-    spouse.there_is_another = False
 ---
 id: any adult relatives
 question: |  
@@ -1160,7 +1205,7 @@ code: |
 
 ---
 code: |  
-  if adult_relatives.number_gathered() >= (10 - number_parents_live_with_child() - number_caregivers_family_or_stg()):
+  if adult_relatives.number_gathered() >= (10 - number_others_live_with_child() - number_caregivers_family_or_stg()):
     adult_relatives.there_is_another = False
 ---
 code: |
@@ -1284,7 +1329,7 @@ subquestion: |
 
   Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
-  **Reminder:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. To learn more, read the instructions you download on an upcoming screen. 
+  **Reminder:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local circuit clerk for details. To learn more, read the instructions you download on an upcoming screen. 
  
 continue button field: next_steps
 ---
@@ -1293,8 +1338,6 @@ continue button field: guardian_intro
 question: |
   Information about the guardian
 subquestion: |
-  **UPDATE**
-
   The next screens will ask questions about you, the person who wants to be ${child.name_full()}'s guardian. If you want the court to appoint a co-guardian, you can enter their information as well.
 
   **Note:** You may have entered some of this information already if you live with or are related to ${child.name_full()}. It is important that it is included in both places.
@@ -1417,6 +1460,8 @@ question: |
   Have you been found to have neglected or abused any minor by DCFS or in court?
 subquestion: |
   It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
+
+  DCFS stands for the Illinois Department of Children & Family Services.
 fields:
   - no label: users[0].found_negligent
     datatype: yesnoradio
@@ -1732,6 +1777,8 @@ question: |
   Has ${users[1].name_full()} been found to have neglected or abused any minor by DCFS or in court?
 subquestion: |
   It is up to the judge to decide how this might affect ${users[1].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+
+  DCFS stands for the Illinois Department of Children & Family Services.  
 fields:
   - no label: users[1].found_negligent
     datatype: yesnoradio
@@ -1756,9 +1803,7 @@ subquestion: |
   % endif
 
   % if guardianship_type != "person":
-  Since you are asking to become guardian of ${ child.name_full() }'s estate, you will need to post a bond.
-  
-  A bond is a financial guarantee that you will manage the ${ child.name_full() }'s property in their best interests. The judge will tell you the bond type and amount. 
+  Since you are asking to become guardian of ${ child.name_full() }'s estate, you will need to post a bond. A bond is a financial guarantee that you will manage the ${ child.name_full() }'s property in their best interests. The judge will tell you the bond type and amount. 
   % endif
   
   You can download the Oath forms at the end of the program.
@@ -1772,9 +1817,9 @@ question: |
   % endif
 subquestion: |
   % if valid_co_guardian():
-  This means you and ${ users[1].name_full() } both understand that:
+  This means you and ${ users[1].name_full() } both understand that as guardian of the person:
   % else:
-  This means you understand that:
+  This means you understand that as guardian of the person:
   % endif
 
   * You are responsible for the health, welfare, and education of ${ child.name_full() }.
@@ -1794,9 +1839,9 @@ question: |
   % endif
 subquestion: |
   % if valid_co_guardian():
-  This means you and ${ users[1].name_full() } both understand that:
+  This means you and ${ users[1].name_full() } both understand that as guardian of the estate:
   % else:
-  This means you understand that:
+  This means you understand that as guardian of the estate:
   % endif
 
   * You are responsible for the care, management, and investment of ${ child.name_full() }'s estate.
@@ -1826,7 +1871,7 @@ buttons:
 id: bond info
 continue button field: bond_info
 question: |
-  Bond required for guardianship of estate
+  Bond required for guardianship of the estate
 subquestion: |
   % if valid_co_guardian():
   A bond is a financial guarantee that you and ${ users[1].name_full() } will manage the ${ child.name_full() }'s property in their best interests.
@@ -2135,14 +2180,14 @@ continue button field: notice_intro
 question: |
   Notify parents and relatives of the guardianship
 subquestion: |
-  The following people must receive a copy of the *{ form_name }* and Notice of the court date:
+  The following people must receive a copy of the *${ form_name }* and Notice of the court date:
   
   * The child's spouse, if they are married,
   * If the minor is not married, the child's parents, adult brothers and sisters, and short-term guardian, if any,
   * If the child has none of the above relatives, then the adult relatives who are most closely related to the minor (for example, grandparents, aunts, and uncles), and
   * The child if they are age 14 or older.
 
-  Notice is done differently depending on where you file. Usually you can deliver in person or send by certified mail.
+  Notice is done differently depending on where you file. Usually you can deliver forms by hand or send them by certified mail.
 
   If any parents or relatives agree to the guardianship, they can sign a *Consent to Guardianship of Minor and Appearance*. They will need to sign the form in front of a notary, and they must file it with the court. A consent is not required, and the judge can appoint a guardian even if there is no consent.
 
@@ -2236,23 +2281,21 @@ content: |
 id: e-signature
 question: |
   Do you want to add your e-signature to your forms?
-subquestion: |
-  **UPDATE THIS PAGE**
-  
+subquestion: |  
   This program can put “**/s/ ${users[0].name_full()}**” where you would sign your name. The court will accept this as your signature.
 
   If you do not add your **{e-signature}** now, you must sign your paper forms before you file and deliver them.
 
   <div class="alert alert-info ilao-info" role="alert">
     <h6 class="alert-heading">What it means to sign your forms</h6>
-    <p>By signing the <i>Motion</i> and <i>Notice of Court Date for Motion</i> forms, you are certifying that:</p>
+    <p>By signing the <i>Petition for Guardianship of a Minor</i>, you are certifying that:</p>
     <p><ul>
       <li>You read the document,</li>
       <li>You have been informed and believe it is true and correct, and</li>
       <li>You are not filing it to cause delay or for another bad reason.</li>
     </ul></p>
     <p>See the <a href="https://ilcourtsaudio.blob.core.windows.net/antilles-resources/resources/9ce1fce9-895f-463e-b87d-f9b7631f8fde/Rule%20137.pdf"><b>Illinois Supreme Court Rule 137</b></a> for more information.</p>
-    <p>By signing the Proof of Delivery section of your forms, you are certifying that:</p>
+    <p>By signing the <i>Notice of Hearing on Petition for Guardianship of a Minor</i> and <i>Oath of Guardian</i> forms, you are certifying that:</p>
     <p><ul>
       <li>Everything on the forms is true and correct, or you have been informed or believe it to be true and correct, and</li>
       <li>You understand that making a false statement on the forms is perjury and has penalties provided by law.</li>    </ul></p>
@@ -2329,7 +2372,7 @@ objects:
   - oath_and_bond: ALDocument.using(title="Oath and Bond of Guardian", filename="oath_of_guardian.pdf", has_addendum=False)
   - oath_and_bond_co_guardian: ALDocument.using(title="Oath and Bond of Co-Guardian", filename="oath_of_co_guardian.pdf", has_addendum=False)
   - consent: ALDocument.using(title="Consent and Appearance (optional, use one for each adult who agrees)", filename="consent_and_appearance.pdf", has_addendum=False)
-  - nomination: ALDocument.using(title="Nomination (optional)", filename="nomination.pdf", has_addendum=False)
+  - nomination: ALDocument.using(title="Nomination of guardian (optional)", filename="nomination.pdf", has_addendum=False)
   - notice: ALDocument.using(title="Notice of hearing", filename="notice.pdf", has_addendum=False)
   - additional_proof_of_delivery: ALDocument.using(title="Additional Proof of Delivery", filename="additional_proof_of_delivery.pdf", has_addendum=False)
   - statement: ALDocument.using(title="Statement for newspaper publication (optional, use one for each adult who can't be found)", filename="statement_for_publication.pdf", has_addendum=False)    
@@ -2411,7 +2454,7 @@ code: |
     publication_letter.enabled = True
 ---
 objects:
-  - petition_bundle: ALDocumentBundle.using(elements=[petition, additional_relatives, additional_cases], filename="petition_for_guardianship.pdf", title="Petition", enabled=True)
+  - petition_bundle: ALDocumentBundle.using(elements=[petition, additional_relatives, additional_cases], filename="petition_for_guardianship.pdf", title="Petition for Guardianship", enabled=True)
   - notice_bundle: ALDocumentBundle.using(elements=[notice, additional_delivery_bundle], filename="notice.pdf", title="Notice of Hearing", enabled=True)
 
 ---
@@ -2523,12 +2566,12 @@ attachment:
     - "more_cases_yes": ${ True if other_case_involving_parents and other_cases.number() > 2 else "" }
     - "estate_unknown": ${ True if child_estate == "unknown" else "" }
     - "estate_0": ${ True if child_estate == "zero" else "" }
-    - "estate_other": ${ True if child_estate == "other" else "" }
-    - "estate_amount": ${ thousands(estate_value, show_decimals=True) if child_estate == "other" else "" }
+    - "estate_other": ${ True if child_estate == "amount" else "" }
+    - "estate_amount": ${ thousands(estate_value, show_decimals=True) if child_estate == "amount" else "" }
     - "income_unknown": ${ True if child_income == "unknown" else "" }
     - "income_0": ${ True if child_income == "zero" else "" }
-    - "income_other": ${ True if child_income == "other" else "" }
-    - "income_amount": ${thousands(income_value, show_decimals=True) if child_income == "other" else ""}
+    - "income_other": ${ True if child_income == "amount" else "" }
+    - "income_amount": ${thousands(income_value, show_decimals=True) if child_income == "amount" else ""}
     - "parent_name_0": ${ parents[0].name_full() if has_legal_parent else "" }
     - "parent_agrees_0": ${ True if has_legal_parent and parents[0].agrees else "" }
     - "parent_is_dead_0": ${ True if has_legal_parent and parents[0].is_dead else "" }
@@ -2894,6 +2937,7 @@ attachment:
   pdf template file: notice.pdf
   fields:
     - "county": ${ trial_court.address.county }
+    - "child_name": ${ child.name_full() }
     - "case_number": ${ "" }
     - "case_number_2": ${ "" }
     - "case_number_3": ${ "" }
@@ -3496,18 +3540,6 @@ review:
       % endif
       % endfor
     show if: other_case_involving_parents
-  - Edit: caregivers.there_are_any
-    button: |
-      **Do any adults live with ${child.name_full()}?**
-      ${ word(yesno(caregivers.there_are_any)) }
-  - Edit: caregivers.revisit
-    button: |
-      **Adults that live with ${child.name_full()}: (Edit to change name, relationship, and notice or consent)**
-
-      % for person in caregivers:
-      * ${ person.name_full() }, ${ person.relationship }
-      % endfor
-    show if: caregivers.there_are_any
   - Edit: minor_is_married
     button: |
       **Is ${child.name_full()} married?**
@@ -3570,6 +3602,18 @@ review:
       Incomplete date and time entered.
       % endif
     show if: minor_is_married and spouse.knows_delivery_method
+  - Edit: caregivers.there_are_any
+    button: |
+      **Do any adults live with ${child.name_full()}?**
+      ${ word(yesno(caregivers.there_are_any)) }
+  - Edit: caregivers.revisit
+    button: |
+      **Adults that live with ${child.name_full()}: (Edit to change name, relationship, and notice or consent)**
+
+      % for person in caregivers:
+      * ${ person.name_full() }, ${ person.relationship }
+      % endfor
+    show if: caregivers.there_are_any
     
   - Edit: adult_relatives.there_are_any
     button: |
@@ -3728,9 +3772,6 @@ review:
       **Do all proposed guardians agree to the terms of guardianship of the estate?**
       ${ word(yesno(oath_estate_agree)) }
 
-      
-      
-  
   - note: |
       <h4>Court and filing details</h4>
   - Edit: child.agrees
@@ -3896,7 +3937,7 @@ question: |
 subquestion: |  
   ${ caregivers.table }
 
-  % if caregivers.number_gathered() < (4 - number_parents_live_with_child() ):
+  % if caregivers.number_gathered() < (4 - number_others_live_with_child() ):
   ${ caregivers.add_action() }
   % endif
 ---
@@ -4010,7 +4051,7 @@ question: |
 subquestion: |  
   ${ adult_relatives.table }
 
-  % if adult_relatives.number_gathered() < (10 - number_parents_live_with_child() - number_caregivers_family_or_stg()):
+  % if adult_relatives.number_gathered() < (10 - number_others_live_with_child() - number_caregivers_family_or_stg()):
   ${ adult_relatives.add_action() }
   % endif
 ---
@@ -4385,18 +4426,6 @@ review:
       % endif
       % endfor
     show if: other_case_involving_parents
-  - Edit: caregivers.there_are_any
-    button: |
-      **Do any adults live with ${child.name_full()}?**
-      ${ word(yesno(caregivers.there_are_any)) }
-  - Edit: caregivers.revisit
-    button: |
-      **Adults that live with ${child.name_full()}: (Edit to change name, relationship, and notice or consent)**
-
-      % for person in caregivers:
-      * ${ person.name_full() }, ${ person.relationship }
-      % endfor
-    show if: caregivers.there_are_any
   - Edit: minor_is_married
     button: |
       **Is ${child.name_full()} married?**
@@ -4459,7 +4488,18 @@ review:
       Incomplete date and time entered.
       % endif
     show if: minor_is_married and spouse.knows_delivery_method
-    
+  - Edit: caregivers.there_are_any
+    button: |
+      **Do any adults live with ${child.name_full()}?**
+      ${ word(yesno(caregivers.there_are_any)) }
+  - Edit: caregivers.revisit
+    button: |
+      **Adults that live with ${child.name_full()}: (Edit to change name, relationship, and notice or consent)**
+
+      % for person in caregivers:
+      * ${ person.name_full() }, ${ person.relationship }
+      % endfor
+    show if: caregivers.there_are_any    
   - Edit: adult_relatives.there_are_any
     button: |
       **Does ${child.name_full()} have any adult relatives?**
