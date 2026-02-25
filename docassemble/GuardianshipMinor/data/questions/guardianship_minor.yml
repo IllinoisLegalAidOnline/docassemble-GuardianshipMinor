@@ -256,7 +256,7 @@ question: |
 subquestion: |
   Welcome to Illinois Legal Aid Online's **Guardianship of a minor** Easy Form.
 
-  This program helps you make a *${ form_name }*. Use it if you want to be the court-ordered guardian of a minor child (under the age of 18). This is called a **{plenary guardian}**. You can also use it if you want the court to appoint a co-guardian along with you.
+  This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you.
   
   **Note:** If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
   
@@ -344,7 +344,7 @@ subquestion: |
 
   Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
-  **Note:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local circuit clerk for details. To learn more, read the instructions you can download at the end of this program. 
+  **Note:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local Circuit Clerk for details. To learn more, read the instructions you can download at the end of this program. 
 ---
 id: user qualified to be guardian
 question: |
@@ -461,6 +461,8 @@ question: |
   Is there a current short-term guardian for ${child.name_full()}?
 subquestion: |
   Parents can have a written agreement for someone to temporarily be the guardian without any court involvement. This is called a **short-term guardianship**.
+
+  If ${child.name_full()} has a current short-term guardian, you may need to enter their information on another screen.
 
   **Note:** If a short-term guardian was appointed, you will need to attach the written agreement when you file your *${ form_name }*.
 fields:
@@ -1074,10 +1076,11 @@ subquestion: |
 
   <div class="alert alert-info ilao-info" role="alert">
     <h6 class="alert-heading">Important information about notice and consent</h6>
-    <p>You will need to notify or get consent from ${child.name_full()}'s other adult relatives and a short-term guardian, if any.<br>
+    <p>You will need to notify or get consent from ${child.name_full()}'s adult relatives and a short-term guardian, if any.<br>
     <ul>
-    <li>Include ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.</li>
-    <li>If ${child.name_full()} has none of those relatives or a short-term guardian, then you will need to list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).</li></ul></p>
+    <li>Include ${child.name_full()}'s parents, and adult brothers and sisters.</li>
+    <li>Include ${child.name_full()}'s short-term guardian, if any.</li>
+    <li>If ${child.name_full()} has none of those relatives or a short-term guardian, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).</li></ul></p>
   </div>
 
   The forms have room for up to ten adult relatives of ${child.name_full()}, including the adults that live with ${child.name_full()}.
@@ -1131,8 +1134,9 @@ subquestion: |
 
   **Important:**
 
-  * Include ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.
-  * If ${child.name_full()} has none of those relatives or a short-term guardian, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).
+  * Include ${child.name_full()}'s parents, adult brothers and sisters.
+  * Include ${child.name_full()}'s short-term guardian, if any.
+  * If ${child.name_full()} has none of those relatives or a short-term guardian, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles). 
 fields:
   - code: |
       adult_relatives[i].name_fields()
@@ -1186,8 +1190,9 @@ subquestion: |
 
   **Important:**
 
-  * Include ${child.name_full()}'s parents, adult brothers and sisters, and short-term guardian, if any.
-  * If ${child.name_full()} has none of those relatives or a short-term guardian, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles).
+  * Include ${child.name_full()}'s parents, adult brothers and sisters.
+  * Include ${child.name_full()}'s short-term guardian, if any.
+  * If ${child.name_full()} has none of those relatives or a short-term guardian, then list the adult relatives who are most closely related to them (for example, grandparents, aunts, and uncles). 
   
   The forms have room for up to ten adult relatives of ${child.name_full()}, including the adults that live with ${child.name_full()}.
 fields:
@@ -1207,31 +1212,6 @@ code: |
 code: |  
   if adult_relatives.number_gathered() >= (10 - number_others_live_with_child() - number_caregivers_family_or_stg()):
     adult_relatives.there_is_another = False
----
-code: |
-  def get_notice_parties():  
-    temp_list = []
-
-    if child.age_in_years() >= 14:
-      child.relationship = "Minor age 14+"
-      temp_list.append(child)
-  
-    if minor_is_married:
-      temp_list.append(spouse)
-    else:
-
-      if has_legal_parent:
-        temp_list.append(parents[0])
-      	if has_second_parent:
-          temp_list.append(parents[1]) 
-      if caregivers.there_are_any:
-        for caregiver in caregivers:
-          temp_list.append(caregiver)    	  
-      if adult_relatives.there_are_any:
-        for x in range(adult_relatives.number() - 1):
-          temp_list.append(adult_relatives[x])
-    
-    return temp_list
 ---
 # consent only for Yes agrees not idk - change?
 code: |
@@ -1304,9 +1284,11 @@ code: |
     temp_list.append(spouse)
   else:
     if has_legal_parent:
-      temp_list.append(parents[0])
+      if not parents[0].is_dead:
+        temp_list.append(parents[0])
     	if has_second_parent:
-        temp_list.append(parents[1]) 
+        if not parents[1].is_dead:
+          temp_list.append(parents[1]) 
     if caregivers.there_are_any:
       for caregiver in caregivers:
         if caregiver.is_family or caregiver.is_stg:
@@ -1329,7 +1311,7 @@ subquestion: |
 
   Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
-  **Reminder:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local circuit clerk for details. To learn more, read the instructions you download on an upcoming screen. 
+  **Reminder:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local Circuit Clerk for details. To learn more, read the instructions you download on an upcoming screen. 
  
 continue button field: next_steps
 ---
@@ -2197,7 +2179,7 @@ id: hearing scheduled
 question: |
   Do you already have a court date scheduled for your Guardianship hearing?
 subquestion: |
-  In some counties, the circuit clerk can give you a hearing date before you file your petition. In other counties, you will get a hearing date when you file your petition. If you have this information now, you can add it to your forms.
+  In some counties, the Circuit Clerk can give you a hearing date before you file your petition. In other counties, you will get a hearing date when you file your petition. If you have this information now, you can add it to your forms.
   
   If the clerk gives you the hearing date after you file your *${form_name}*, you can add it to your Notice forms later. 
   
@@ -3252,7 +3234,6 @@ attachment:
     - "child_name": ${ child.name_full() }
     - "child_name_2": ${ child.name_full() }
     - "guardian_name": ${ users[0].name_full() }
-    - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
     - "user_name": ${ users[0].name_full() }
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }

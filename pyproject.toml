@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "docassemble.GuardianshipMinor"
-version = "0.0.41"
+version = "0.0.42"
 description = "A docassemble extension."
 readme = "README.md"
 authors = [
