@@ -886,7 +886,6 @@ code: |
   caregivers[i].address = child.address.copy_deep(caregivers[i].attr_name('address'))
   caregivers[i].address.known = True
   caregivers[i].agrees
-  caregivers[i].notice_relationship
   if caregivers[i].knows_delivery_method:
     caregivers[i].hand_delivery
     caregivers[i].delivery_date
@@ -935,21 +934,6 @@ subquestion: |
 fields:
   - code: |
       caregivers[i].name_fields()
----
-id: caregiver relationship
-question: |
-  What is ${caregivers[i].name_full()}'s relationship to ${child.name_full()}?
-subquestion: |
-  Examples include: sister, brother, aunt, uncle, grandparent, or cousin.
-  
-  You can also enter things like Short-term guardian, or a relative's friend or partner.
-fields:
-  - "Relationship to ${child.name_full()}": caregivers[i].relationship
-    maxlength: 25
-  - "Are they related to to ${child.name_full()} through blood or marriage?": caregivers[i].is_family
-    datatype: yesnoradio
-  - "Are they ${child.name_full()}'s short-term guardian?": caregivers[i].is_stg
-    datatype: yesnoradio
 ---
 id: any other caregivers
 question: |  
@@ -1102,7 +1086,6 @@ code: |
   adult_relatives[i].agrees
   if not adult_relatives[i].address.known:
     adult_relatives[i].notice_by_publication  
-  adult_relatives[i].notice_relationship
   if adult_relatives[i].knows_delivery_method:
     adult_relatives[i].hand_delivery
     adult_relatives[i].delivery_date
@@ -1146,13 +1129,6 @@ subquestion: |
 fields:
   - code: |
       adult_relatives[i].name_fields()
----
-id: adult relative relationship
-question: |
-  What is ${adult_relatives[i].name_full()}'s relationship to ${child.name_full()}?
-fields:
-  - Relationship to ${child.name_full()}: adult_relatives[i].relationship
-    maxlength: 25
 ---
 id: adult relative address
 question: |
@@ -1316,9 +1292,13 @@ code: |
     if caregivers.there_are_any:
       for caregiver in caregivers:
         if caregiver.is_family or caregiver.is_stg:
+          if caregiver.notice_relationship == "other":
+            caregiver.other_notice_relationship = caregiver.relationship
           temp_list.append(caregiver)    	  
     if adult_relatives.there_are_any:
       for adult_relative in adult_relatives:
+        if adult_relative.notice_relationship == "other":
+          adult_relative.other_notice_relationship = adult_relative.relationship
         temp_list.append(adult_relative)
   notice_parties = ALPeopleList("relatives", elements = temp_list )
   
@@ -1919,26 +1899,39 @@ code: |
     else:
       return False
 ---
-id: notice relationship
-generic object: ALPeopleList
+id: caregiver relationship
 question: |
-  Choose a relationship for Notice form
+  What is ${caregivers[i].name_full()}'s relationship to ${child.name_full()}?
 subquestion: |
-  The *Notice of Hearing on Petition for Guardianship of a Minor* form ask for different information than the *${ form_name}*.
-
-  You told us that ${x[i].name_full()} is ${ child.name_full()}'s ${x[i].relationship}. Pick the option that fits.
+  This is used in the *${ form_name }* and the *Notice of Hearing on Petition for Guardianship of a Minor*. Each form asks for different information so some of this may be repetitive.
 fields:
-  - "${x[i].name_full()} is": x[i].notice_relationship
+  - "Relationship to ${child.name_full()}": caregivers[i].relationship
+    maxlength: 30
+  - "For notice purposes, ${caregivers[i].name_full()} is:": caregivers[i].notice_relationship
     input type: radio
     choices: 
       - "${ child.name_full()}'s **sibling** who is at least 18 years old": sibling
-      - "Some **other adult**, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}": custody
+      - "Some **other adult**, not ${ child.name_full()}'s sibling, who has had legal or physical custody of ${ child.name_full()}": custody
       - "A person with a **different relationship** to ${ child.name_full() }": other
-  - "Other relationship": x[i].other_notice_relationship
-    maxlength: 40
-    show if:
-      variable: x[i].notice_relationship
-      is: "other"
+  - "Is ${caregivers[i].name_full()} related to to ${child.name_full()} through blood or marriage?": caregivers[i].is_family
+    datatype: yesnoradio
+  - "Is ${caregivers[i].name_full()} ${child.name_full()}'s short-term guardian?": caregivers[i].is_stg
+    datatype: yesnoradio
+---
+id: adult relative relationship
+question: |
+  What is ${adult_relatives[i].name_full()}'s relationship to ${child.name_full()}?
+subquestion: |
+    This is used in the *${ form_name }* and the *Notice of Hearing on Petition for Guardianship of a Minor*. Each form asks for different information so some of this may be repetitive.
+fields:
+  - "Relationship to ${child.name_full()}": adult_relatives[i].relationship
+    maxlength: 30
+  - "For notice purposes, ${adult_relatives[i].name_full()} is:": adult_relatives[i].notice_relationship
+    input type: radio
+    choices: 
+      - "${ child.name_full()}'s **sibling** who is at least 18 years old": sibling
+      - "Some **other adult**, not ${ child.name_full()}'s sibling, who has had legal or physical custody of ${ child.name_full()}": custody
+      - "A person with a **different relationship** to ${ child.name_full() }": other
 ---
 id: notice agrees
 generic object: ALIndividual
@@ -3992,14 +3985,6 @@ review:
     button: |
       **Relationship to ${child.name_full()}:**
       ${ x.relationship }
-  - Edit: x.is_family
-    button: |
-      **Related to to ${child.name_full()} through blood or marriage?**
-      ${word(yesno(x.is_family))}
-  - Edit: x.is_stg
-    button: |
-      **Is ${ x.name_full()  } the short-term guardian of ${child.name_full()}?**
-      ${word(yesno(x.is_stg))}
   - Edit: x.notice_relationship
     button: |
       **For notice purposes, ${x.name_full()} is:**
@@ -4009,8 +3994,16 @@ review:
       % elif x.notice_relationship == "custody":    
       Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}
       % else:
-      Other: ${ x.other_notice_relationship }
+      A person with a different relationship (not an adult sibling or a person who had legal or physical custody of ${ child.name_full()}
       % endif
+  - Edit: x.is_family
+    button: |
+      **Related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(x.is_family))}
+  - Edit: x.is_stg
+    button: |
+      **Is ${ x.name_full()  } the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(x.is_stg))}
   - Edit: x.agrees
     button: |
       **Does ${x.name_full()} agree to the guardianship of ${ child.name_full()}?**
@@ -4113,9 +4106,9 @@ review:
       % if x.notice_relationship == "sibling": 
       ${ child.name_full()}'s sibling who is at least 18 years old
       % elif x.notice_relationship == "custody":    
-      Some other adult, not ${ child.name_full()}'s parent or sibling, who has had legal or physical custody of ${ child.name_full()}
+      Some other adult, not ${ child.name_full()}'s sibling, who has had legal or physical custody of ${ child.name_full()}
       % else:
-      Other: ${ x.other_notice_relationship }
+      A person with a different relationship (not an adult sibling or a person who had legal or physical custody of ${ child.name_full()}
       % endif      
   - Edit: x.address.known
     button: |
