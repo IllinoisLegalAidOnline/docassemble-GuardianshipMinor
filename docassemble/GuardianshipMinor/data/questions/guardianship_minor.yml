@@ -24,6 +24,7 @@ objects:
   - spouse.jail_delivery_address: ALAddress
   - adult_relatives: ALPeopleList.using(complete_attribute='complete')
   - adult_relatives[i].jail_delivery_address: ALAddress
+  - adults_living_with: ALPeopleList.using(there_are_any=True)	
   - relatives: ALPeopleList.using(there_are_any=True)	
   - notice_parties: ALPeopleList.using(there_are_any=True)
   - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
@@ -82,7 +83,7 @@ code: |
   if has_legal_parent:
 
     parents[0].name.first
-    parents[0].relationship = "parent"
+    parents[0].relationship = "Parent"
     if parents[0].agrees:
       parents[0].consent_info
     if parents[0].not_found or parents[0].is_dead:
@@ -99,7 +100,7 @@ code: |
   
     if has_second_parent:
       parents[1].name.first
-      parents[1].relationship = "parent"
+      parents[1].relationship = "Parent"
       if parents[1].agrees:
         parents[1].consent_info
       if parents[1].not_found or parents[1].is_dead:
@@ -132,6 +133,7 @@ code: |
     if spouse.knows_delivery_method:
       spouse.hand_delivery
       spouse.delivery_date
+  build_lives_with_list
   if caregivers.there_are_any:
     caregivers.gather()
   if not minor_is_married:
@@ -340,7 +342,7 @@ question: |
 subquestion: |
   Once you download your forms, you must file them with the court. This program **does not file** your forms for you. When you file your forms, you will get a date for a court hearing where a judge will review your case.
 
-  After you filed the *${ form_name }* and get a court date, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
+  After you file the *${ form_name }* and get a court date, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
 
   Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
   
@@ -358,7 +360,9 @@ subquestion: |
   * Not be under a court-ordered guardianship yourself, and
   * Not have a felony conviction that involves harm or threat to a minor.
 
-  **Note:** If you have a felony conviction that does not involve harm or threat to a minor, you may still be appointed if the judge finds it to be in the minor's best interest.  
+  **Note:** If you have a felony conviction that does not involve harm or threat to a minor, you may still be appointed if the judge finds it to be in the minor's best interest.
+
+  In addition, a guardian must be willing and able to care for the child, make decisions for them, or make decisions about their money and property. The specific requirements depend on whether the court appoints guardianship of the person, the estate, or both the person and the estate.
 fields:
   - "Do you meet these requirements?": user_qualified
     datatype: yesnoradio
@@ -551,7 +555,7 @@ fields:
       - "I don't know the amount of ${child.name_full()}'s income.": unknown
       - "$0 - ${child.name_full()} has no annual income.": zero
       - "I will enter the amount.": amount                                                            
-  - "Value of ${child.name_full()}'s estate": income_value
+  - "${child.name_full()}'s annual income": income_value
     datatype: currency
     show if:
       variable: child_income
@@ -629,6 +633,8 @@ question: |
   Information about ${parents[i].name_full()}
 subquestion: |
   Enter information about ${parents[i].name_full()}. Check all that apply.
+
+  **Note:** You may need to provide evidence about ${parents[i].name_full()} if they do not participate in the court case.
 fields:
   - "${parents[i].name_full()} agrees to the guardianship. They will have to sign a *Consent to Guardianship of Minor and Appearance* or give consent in court.": parents[i].agrees
     datatype: yesnowide
@@ -936,7 +942,7 @@ question: |
 subquestion: |
   Examples include: sister, brother, aunt, uncle, grandparent, or cousin.
   
-  You can also enter things like Short-term guardian, or a relative's friend or parnter.
+  You can also enter things like Short-term guardian, or a relative's friend or partner.
 fields:
   - "Relationship to ${child.name_full()}": caregivers[i].relationship
     maxlength: 25
@@ -1247,7 +1253,25 @@ code: |
         return True
 
     return False
+---
+reconsider: True
+code: |
+  temp_list = []
 
+  if has_legal_parent:
+    if not parents[0].is_dead:
+      temp_list.append(parents[0])
+  	if has_second_parent:
+      if not parents[1].is_dead:
+        temp_list.append(parents[1]) 
+  if minor_is_married:
+    temp_list.append(spouse)
+  if caregivers.there_are_any:
+    for caregiver in caregivers:
+      temp_list.append(caregiver)    	  
+  adults_living_with = ALPeopleList("adults_living_with", elements = temp_list )
+  
+  build_lives_with_list = True
 ---
 reconsider: True
 code: |
@@ -1386,13 +1410,13 @@ event: guardian_not_willing
 question: |
   Sorry
 subquestion: |
-  % if guardianship_type == "person":
+  % if guardianship_type != "estate":
   You must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as guardian of the person.
   % endif
   % if guardianship_type == "both":
   [NEWLINE]
   % endif
-  % if guardianship_type == "estate":
+  % if guardianship_type != "person":
   You must be willing and able to be responsible for the care, management, and investment of ${child.name_full()}'s money and property to be appointed as guardian of the estate.
   % endif
   
@@ -1646,7 +1670,26 @@ content: |
 ---
 id: add co-guardian
 question: |
-  Do you want someone to be a co-guardian of ${child.name_full()} with you? 
+  Do you want someone to be a co-guardian of ${child.name_full()} with you?
+subquestion: |
+  The co-guardian will have the same responsibilities as you.
+  
+  % if guardianship_type != "estate":
+  A guardian of the **person** is responsible for ${child.name_full()}'s:
+
+  * Safety,
+  * Physical and emotional well-being,
+  * Housing,
+  * Education,
+  * Nutrition, and
+  * Medical care.
+  % endif
+  % if guardianship_type == "both":
+  
+  % endif
+  % if guardianship_type != "person":
+  A guardian of the **estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
+  % endif  
 fields:
   - no label: add_co_guardian
     datatype: yesnoradio
@@ -1706,13 +1749,13 @@ continue button field: co_guardian_not_willing
 question: |
   Sorry
 subquestion: |
-  % if guardianship_type == "person":
+  % if guardianship_type != "estate":
   ${users[1].name_full()} must be willing and able to be responsible for the health, welfare, and education of ${child.name_full()} to be appointed as co-guardian of the person.
   % endif
   % if guardianship_type == "both":
   [NEWLINE]
   % endif
-  % if guardianship_type == "estate":
+  % if guardianship_type != "person":
   ${users[1].name_full()} must be willing and able to be responsible for the care, management, and investment of ${child.name_full()}'s money and property to be appointed as co-guardian of the estate.
   % endif
 
@@ -2476,18 +2519,18 @@ attachment:
     - "child_name_2": ${ child.name_full() }
     - "child_dob": ${ child.birthdate }
     - "child_address": ${ child.address.on_one_line(bare=True) }
-    - "caregiver_name_0": ${ caregivers[0].name_full() if caregivers.there_are_any else "" }
-    - "caregiver_address_0": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any else "" }
-    - "caregiver_relationship_0": ${ caregivers[0].relationship if caregivers.there_are_any else "" }
-    - "caregiver_name_1": ${ caregivers[1].name_full() if caregivers.there_are_any and caregivers.number() > 1 else "" }
-    - "caregiver_address_1": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 1 else "" }
-    - "caregiver_relationship_1": ${ caregivers[1].relationship if caregivers.there_are_any and caregivers.number() > 1 else "" }
-    - "caregiver_name_2": ${ caregivers[2].name_full() if caregivers.there_are_any and caregivers.number() > 2 else "" }
-    - "caregiver_address_2": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 2 else "" }
-    - "caregiver_relationship_2": ${ caregivers[2].relationship if caregivers.there_are_any and caregivers.number() > 2 else "" }
-    - "caregiver_name_3": ${ caregivers[3].name_full() if caregivers.there_are_any and caregivers.number() > 3 else "" }
-    - "caregiver_address_3": ${ child.address.on_one_line(bare=True) if caregivers.there_are_any and caregivers.number() > 3 else "" }
-    - "caregiver_relationship_3": ${ caregivers[3].relationship if caregivers.there_are_any and caregivers.number() > 3 else "" }
+    - "caregiver_name_0": ${ adults_living_with[0].name_full() if adults_living_with.number() > 0 else "" }
+    - "caregiver_address_0": ${ child.address.on_one_line(bare=True) if adults_living_with.number() > 0 else "" }
+    - "caregiver_relationship_0": ${ adults_living_with[0].relationship if adults_living_with.number() > 0 else "" }
+    - "caregiver_name_1": ${ adults_living_with[1].name_full() if adults_living_with.number() > 1 else "" }
+    - "caregiver_address_1": ${ child.address.on_one_line(bare=True) if adults_living_with.number() > 1 else "" }
+    - "caregiver_relationship_1": ${ adults_living_with[1].relationship if adults_living_with.number() > 1 else "" }
+    - "caregiver_name_2": ${ adults_living_with[2].name_full() if adults_living_with.number() > 2 else "" }
+    - "caregiver_address_2": ${ child.address.on_one_line(bare=True) if adults_living_with.number() > 2 else "" }
+    - "caregiver_relationship_2": ${ adults_living_with[2].relationship if adults_living_with.number() > 2 else "" }
+    - "caregiver_name_3": ${ adults_living_with[3].name_full() if adults_living_with.number() > 3 else "" }
+    - "caregiver_address_3": ${ child.address.on_one_line(bare=True) if adults_living_with.number() > 3 else "" }
+    - "caregiver_relationship_3": ${ adults_living_with[3].relationship if adults_living_with.number() > 3 else "" }
     - "relative_name_0": ${ relatives[0].name_full() if relatives.number() > 0 else "" }
     - "relative_address_0": ${ relatives[0].address.on_one_line(bare=True) if relatives.number() > 0 else "" }
     - "relative_relationship_0": ${ relatives[0].relationship if relatives.number() > 0 else "" }
@@ -2593,11 +2636,11 @@ attachment:
     - "guardian_no_felonies": ${ not users[0].has_felony_conviction }
     - "guardian_yes_felonies": ${ users[0].has_felony_conviction }
     - "guardian_felony_date_0": ${ users[0].felony_convictions[0].date if users[0].has_felony_conviction else "" }
-    - "guardian_felony_charge_0": ${ users[0].felony_convictions[0].charge if users[0].has_felony_conviction else "" }
+    - "guardian_felony_charge_0": ${ users[0].felony_convictions[0].name.text if users[0].has_felony_conviction else "" }
     - "guardian_felony_date_1": ${ users[0].felony_convictions[1].date if users[0].has_felony_conviction and users[0].felony_convictions.number() > 1 else "" }
-    - "guardian_felony_charge_1": ${ users[0].felony_convictions[1].charge if users[0].has_felony_conviction and users[0].felony_convictions.number() > 1 else "" }
+    - "guardian_felony_charge_1": ${ users[0].felony_convictions[1].name.text if users[0].has_felony_conviction and users[0].felony_convictions.number() > 1 else "" }
     - "guardian_felony_date_2": ${ users[0].felony_convictions[2].date if users[0].has_felony_conviction and users[0].felony_convictions.number() > 2  else "" }
-    - "guardian_felony_charge_2": ${ users[0].felony_convictions[2].charge if users[0].has_felony_conviction and users[0].felony_convictions.number() > 2 else "" }
+    - "guardian_felony_charge_2": ${ users[0].felony_convictions[2].name.text if users[0].has_felony_conviction and users[0].felony_convictions.number() > 2 else "" }
     - "guardian_dcfs_yes": ${ users[0].found_negligent }
     - "guardian_dcfs_no": ${ not users[0].found_negligent }
     - "co_guardian_no": ${ True if not add_co_guardian or valid_co_guardian() == False else '' }
@@ -2611,11 +2654,11 @@ attachment:
     - "co_guardian_no_felonies": ${ not users[1].has_felony_conviction if add_co_guardian and valid_co_guardian() else ""}
     - "co_guardian_yes_felonies": ${ users[1].has_felony_conviction if add_co_guardian and valid_co_guardian() else ""}
     - "co_guardian_felony_date_0": ${ users[1].felony_convictions[0].date if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction else "" }
-    - "co_guardian_felony_charge_0": ${ users[1].felony_convictions[0].charge if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction else "" }
+    - "co_guardian_felony_charge_0": ${ users[1].felony_convictions[0].name.text if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction else "" }
     - "co_guardian_felony_date_1": ${ users[1].felony_convictions[1].date if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
-    - "co_guardian_felony_charge_1": ${ users[1].felony_convictions[1].charge if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
+    - "co_guardian_felony_charge_1": ${ users[1].felony_convictions[1].name.text if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 1 else "" }
     - "co_guardian_felony_date_2": ${ users[1].felony_convictions[2].date if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 2  else "" }
-    - "co_guardian_felony_charge_2": ${ users[1].felony_convictions[2].charge if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 2 else "" }
+    - "co_guardian_felony_charge_2": ${ users[1].felony_convictions[2].name.text if add_co_guardian and valid_co_guardian() and users[1].has_felony_conviction and users[1].felony_convictions.number() > 2 else "" }
     - "co_guardian_dcfs_yes": ${ users[1].found_negligent if add_co_guardian and valid_co_guardian() else ""}
     - "co_guardian_dcfs_no": ${ not users[1].found_negligent if add_co_guardian and valid_co_guardian() else ""}
     - "guardianship_type_person_2": ${ True if guardianship_type == "person" else "" }
