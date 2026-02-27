@@ -1,6 +1,6 @@
 metadata:
-  title: Guardianship of a minor
-  short title: Guardianship of a minor
+  title: Minor guardianship
+  short title: Minor guardianship
   comment: This program helps you ask the court to become a legal guardian of a minor.
   authors:
     - Matt Newsted
@@ -31,7 +31,7 @@ objects:
 ---
 code: |
   al_form_type = 'starts_case'
-  ilao_easy_form_title = "Guardianship of a minor"
+  ilao_easy_form_title = "Minor guardianship"
   ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/guardianship-minor"
   form_name = "Petition for Guardianship of a Minor"
   github_user = 'IllinoisLegalAidOnline'
@@ -254,9 +254,9 @@ code: |
 ---
 id: welcome
 question: |
-  Guardianship of a minor
+  Minor guardianship
 subquestion: |
-  Welcome to Illinois Legal Aid Online's **Guardianship of a minor** Easy Form.
+  Welcome to Illinois Legal Aid Online's **Minor guardianship** Easy Form.
 
   This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you.
   
@@ -2371,7 +2371,7 @@ under: |
 generic object: ALDocumentBundle
 template: x.send_email_template
 subject: |
-  Guardianship of a minor forms
+  Minor guardianship forms
 content: |
   Your forms are attached.
   
