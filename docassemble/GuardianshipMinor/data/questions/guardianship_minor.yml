@@ -1,7 +1,7 @@
 metadata:
-  title: Minor guardianship
-  short title: Minor guardianship
-  comment: This program helps you ask the court to become a legal guardian of a minor.
+  title: Guardianship of a child
+  short title: Guardianship of a child
+  comment: This program helps you ask the court to become a legal guardian of a minor child.
   authors:
     - Matt Newsted
 ---
@@ -31,14 +31,13 @@ objects:
 ---
 code: |
   al_form_type = 'starts_case'
-  ilao_easy_form_title = "Minor guardianship"
+  ilao_easy_form_title = "Guardianship of a child"
   ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/guardianship-minor"
   form_name = "Petition for Guardianship of a Minor"
   github_user = 'IllinoisLegalAidOnline'
   github_repo_name = 'docassemble-GuardianshipMinor'
   allowed_courts = ['Circuit']
 ---
-# Road map
 sections:
   - section_intro: Start
   - section_child: Child
@@ -254,15 +253,15 @@ code: |
 ---
 id: welcome
 question: |
-  Minor guardianship
+  Guardianship of a child
 subquestion: |
-  Welcome to Illinois Legal Aid Online's **Minor guardianship** Easy Form.
+  Welcome to Illinois Legal Aid Online's **Guardianship of a child** Easy Form.
 
-  This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you.
+  This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you./node/30531).
   
   **Note:** If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
-  
-  To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
+ 
+  To learn more about plenary guardianship, and also standby and short-term guardianships, see ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 field: sees_nav_bar
 ---
 id: instructions
@@ -272,13 +271,13 @@ question: |
 subquestion: |
   To fill out the forms, you will need to know:
 
-  * Name, birthdate, and address of the minor child,
-  * Names and addresses of the minor's nearest relatives and the person who has custody of the minor,
-  * Approximate value of minor's estate (property) and annual income from all sources,
+  * Name, birthdate, and address of the child,
+  * Names and addresses of the child's nearest relatives and the person who has custody of the child,
+  * Approximate value of child's estate (property) and annual income from all sources,
   * Your name, address, age, occupation, telephone, email address, and criminal history (and of the co-guardian, if any),
-  * Details about other court cases involving the minor and their parents,
-  * Information about the parents, such as most recent contact with minor, reasons why they are unable to care for the minor, or date of death, and
-  * Details about any current or previous standby or short-term guardians of the minor.
+  * Details about other court cases involving the child and their parents,
+  * Information about the parents, such as most recent contact with child, reasons why they are unable to care for the child, or date of death, and
+  * Details about any current or previous standby or short-term guardians of the child.
 
   Set aside 20 to 30 minutes to finish this program. You can log in and save your work to continue later. 
  
@@ -306,7 +305,7 @@ continue button field: basic_info
 question: |
   About guardianship of a child
 subquestion: |
-  Usually, only the parents of a minor child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a **{plenary guardian}** to care for and make decisions for the child.
+  Usually, only the parents of a child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a **{plenary guardian}** to care for and make decisions for the child.
 
   A guardian of the **person** is responsible for the dhild's:
 
@@ -331,9 +330,9 @@ subject: |
 content: |
   A court-ordered minor guardianship can end in the following ways:  
 
-  * A minor guardianship automatically ends when the minor turns 18.
-  * A minor's parent may ask the judge to end the guardianship before the minor turns 18. The parent will be required to show how things have changed since the guardianship was entered. The guardians will have an opportunity to respond and to show if ending the guardianship would not be in the minor's best interests.
-  * A guardian can ask the court to end the guardianship before the minor turns 18.
+  * A minor guardianship automatically ends when the child turns 18.
+  * A child's parent may ask the judge to end the guardianship before the child turns 18. The parent will be required to show how things have changed since the guardianship was entered. The guardians will have an opportunity to respond and to show if ending the guardianship would not be in the child's best interests.
+  * A guardian can ask the court to end the guardianship before the child turns 18.
 ---
 id: whats next
 continue button field: whats_next
@@ -358,9 +357,9 @@ subquestion: |
   * Live in the United States,
   * Be of sound mind,
   * Not be under a court-ordered guardianship yourself, and
-  * Not have a felony conviction that involves harm or threat to a minor.
+  * Not have a felony conviction that involves harm or threat to a child.
 
-  **Note:** If you have a felony conviction that does not involve harm or threat to a minor, you may still be appointed if the judge finds it to be in the minor's best interest.
+  **Note:** If you have a felony conviction that does not involve harm or threat to a child, you may still be appointed if the judge finds it to be in the child's best interest.
 
   In addition, a guardian must be willing and able to care for the child, make decisions for them, or make decisions about their money and property. The specific requirements depend on whether the court appoints guardianship of the person, the estate, or both the person and the estate.
 fields:
@@ -380,7 +379,7 @@ subquestion: |
   * Live in the United States,
   * Be of sound mind,
   * Not be under a court-ordered guardianship yourself, and
-  * Not have a felony conviction that involves harm or threat to a minor.
+  * Not have a felony conviction that involves harm or threat to a child.
 
   Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
@@ -391,7 +390,7 @@ id: child birthdate
 question: |
   When was ${child.name_full()} born?
 subquestion: |
-  **Note:** If the child is undocumented and under 21, talk with an immigration lawyer to see if the minor is eligible for **[Special Immigrant Juvenile Status](https://www.uscis.gov/working-in-US/eb4/SIJ)** before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
+  **Note:** If the child is undocumented and under 21, talk with an immigration lawyer to see if the child is eligible for **[Special Immigrant Juvenile Status](https://www.uscis.gov/working-in-US/eb4/SIJ)** before you file this form. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 fields:
   - Birthdate: child.birthdate
     datatype: BirthDate
@@ -448,7 +447,7 @@ id: previous standby guardianship
 question: |
   Has a judge appointed a standby guardian for ${child.name_full()}?
 subquestion: |
-  A court can appoint a person as a **standby guardian**. That person will become the guardian once the parents or current guardian are no longer able to care for the minor.
+  A court can appoint a person as a **standby guardian**. That person will become the guardian once the parents or current guardian are no longer able to care for the child.
 
   **Note:** If a standby guardian was appointed, you will need to attach the court order when you file your *${ form_name }*.
 fields:
@@ -722,7 +721,7 @@ subquestion: |
   * Divorce,
   * Custody,
   * Parentage,
-  * child support,
+  * Child support,
   * Orders of Protection,
   * Juvenile,
   * DCFS (Department of Children & Family Services), and
@@ -885,7 +884,8 @@ code: |
   caregivers[i].relationship
   caregivers[i].address = child.address.copy_deep(caregivers[i].attr_name('address'))
   caregivers[i].address.known = True
-  caregivers[i].agrees
+  if caregivers[i].is_family == False and caregivers[i].is_stg == False:
+    caregivers[i].agrees
   if caregivers[i].knows_delivery_method:
     caregivers[i].hand_delivery
     caregivers[i].delivery_date
@@ -1443,7 +1443,7 @@ fields:
 ---
 id: guardian negligent
 question: |
-  Have you been found to have neglected or abused any minor by DCFS or in court?
+  Have you been found to have neglected or abused any child by DCFS or in court?
 subquestion: |
   It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
 
@@ -1528,9 +1528,9 @@ template: felony_conviction_help
 subject: |
   **What a judge considers when looking at felony convictions**
 content: |  
-  A person with a felony conviction that involves harm or threat to a minor cannot be appointed guardian of a minor.
+  A person with a felony conviction that involves harm or threat to a child cannot be appointed guardian of a child.
   
-  If that person has a felony conviction that does not involve harm or threat to a minor, they may still be appointed if the judge finds it to be in the minor's best interest.
+  If that person has a felony conviction that does not involve harm or threat to a child, they may still be appointed if the judge finds it to be in the child's best interest.
 ---
 id: any other felony convictions
 generic object: ALPeopleList
@@ -1779,7 +1779,7 @@ fields:
 ---
 id: co-guardian negligent
 question: |
-  Has ${users[1].name_full()} been found to have neglected or abused any minor by DCFS or in court?
+  Has ${users[1].name_full()} been found to have neglected or abused any child by DCFS or in court?
 subquestion: |
   It is up to the judge to decide how this might affect ${users[1].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
 
@@ -2201,8 +2201,8 @@ subquestion: |
   The following people must receive a copy of the *${ form_name }* and Notice of the court date:
   
   * The child's spouse, if they are married,
-  * If the minor is not married, the child's parents, adult brothers and sisters, and short-term guardian, if any,
-  * If the child has none of the above relatives, then the adult relatives who are most closely related to the minor (for example, grandparents, aunts, and uncles), and
+  * If the child is not married, the child's parents, adult brothers and sisters, and short-term guardian, if any,
+  * If the child has none of the above relatives, then the adult relatives who are most closely related to the child (for example, grandparents, aunts, and uncles), and
   * The child if they are age 14 or older.
 
   Notice is done differently depending on where you file. Usually you can deliver forms by hand or send them by certified mail.
@@ -2371,7 +2371,7 @@ under: |
 generic object: ALDocumentBundle
 template: x.send_email_template
 subject: |
-  Minor guardianship forms
+  Guardianship forms
 content: |
   Your forms are attached.
   
@@ -3674,7 +3674,7 @@ review:
       ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].found_negligent
     button: |
-      **Have you been found to have neglected or abused any minor by DCFS or in court?**
+      **Have you been found to have neglected or abused any child by DCFS or in court?**
       ${ word(yesno(users[0].found_negligent))}
   - Edit: users[0].has_felony_conviction
     button: |
@@ -3745,7 +3745,7 @@ review:
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].found_negligent
     button: |
-      **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
+      **Has ${ users[1].name_full() } been found to have neglected or abused any child by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].has_felony_conviction
@@ -4566,7 +4566,7 @@ review:
       ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].found_negligent
     button: |
-      **Have you been found to have neglected or abused any minor by DCFS or in court?**
+      **Have you been found to have neglected or abused any child by DCFS or in court?**
       ${ word(yesno(users[0].found_negligent))}
   - Edit: users[0].has_felony_conviction
     button: |
@@ -4637,7 +4637,7 @@ review:
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].found_negligent
     button: |
-      **Has ${ users[1].name_full() } been found to have neglected or abused any minor by DCFS or in court?**
+      **Has ${ users[1].name_full() } been found to have neglected or abused any child by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].has_felony_conviction
