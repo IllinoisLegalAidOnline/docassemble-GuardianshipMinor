@@ -83,6 +83,7 @@ code: |
 
     parents[0].name.first
     parents[0].relationship = "Parent"
+    parents[0].notice_relationship = "parent"  
     if parents[0].agrees:
       parents[0].consent_info
     if parents[0].not_found or parents[0].is_dead:
@@ -92,7 +93,6 @@ code: |
         get_address(parents[0], child)
       else:
         parents[0].notice_by_publication
-      parents[0].notice_relationship = "parent"  
       if parents[0].knows_delivery_method:
         parents[0].hand_delivery
         parents[0].delivery_date
@@ -100,6 +100,7 @@ code: |
     if has_second_parent:
       parents[1].name.first
       parents[1].relationship = "Parent"
+      parents[1].notice_relationship = "parent"  
       if parents[1].agrees:
         parents[1].consent_info
       if parents[1].not_found or parents[1].is_dead:
@@ -109,10 +110,9 @@ code: |
           get_address(parents[1], child)
         else:
           parents[1].notice_by_publication  
-        parents[1].notice_relationship = "parent"  
-      if parents[1].knows_delivery_method:
-        parents[1].hand_delivery
-        parents[1].delivery_date
+        if parents[1].knows_delivery_method:
+          parents[1].hand_delivery
+          parents[1].delivery_date
 
   # parent_child_same_address_check
   
@@ -257,11 +257,11 @@ question: |
 subquestion: |
   Welcome to Illinois Legal Aid Online's **Guardianship of a child** Easy Form.
 
-  This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you./node/30531).
+  This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you.
   
   **Note:** If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
  
-  To learn more about plenary guardianship, and also standby and short-term guardianships, see ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
+  In Illinois, there are also standby and short-term guardianships. Each kind of guardianship has different requirements and responsibilities. To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 field: sees_nav_bar
 ---
 id: instructions
@@ -473,6 +473,8 @@ fields:
     datatype: yesnoradio
   - note: |
       Be sure to attach the written short-term guardianship agreement to your *${ form_name }* when you file.
+
+      Also, you will need to enter information about the short-term guardian, like their name and address, on other screens.
     show if:
       variable: current_stg
       is: True
@@ -884,11 +886,11 @@ code: |
   caregivers[i].relationship
   caregivers[i].address = child.address.copy_deep(caregivers[i].attr_name('address'))
   caregivers[i].address.known = True
-  if caregivers[i].is_family == False and caregivers[i].is_stg == False:
+  if caregivers[i].is_family or caregivers[i].is_stg:
     caregivers[i].agrees
-  if caregivers[i].knows_delivery_method:
-    caregivers[i].hand_delivery
-    caregivers[i].delivery_date
+    if caregivers[i].knows_delivery_method:
+      caregivers[i].hand_delivery
+      caregivers[i].delivery_date
   caregivers[i].complete = True
 ---
 id: caregiver name
@@ -1212,8 +1214,9 @@ code: |
     else:
       if caregivers.there_are_any:
         for caregiver in caregivers:
-          if caregiver.agrees:
-            return True
+          if caregiver.is_family or caregiver.is_stg:
+            if caregiver.agrees:
+              return True
       if adult_relatives.there_are_any:
         for x in range(adult_relatives.number() - 1):
           if adult_relatives[x].agrees:
@@ -1236,12 +1239,19 @@ code: |
 
   if has_legal_parent:
     if not parents[0].is_dead:
-      temp_list.append(parents[0])
+      if parents[0].address.known:
+        if parents[0].lives_with_child:
+          temp_list.append(parents[0])
   	if has_second_parent:
       if not parents[1].is_dead:
-        temp_list.append(parents[1]) 
+        if parents[1].address.known:
+          if parents[1].lives_with_child:
+            temp_list.append(parents[1]) 
   if minor_is_married:
-    temp_list.append(spouse)
+    if spouse.lives_with_child:
+      if spouse.address.known:
+        if spouse.lives_with_child:
+          temp_list.append(spouse)
   if caregivers.there_are_any:
     for caregiver in caregivers:
       temp_list.append(caregiver)    	  
@@ -1907,11 +1917,13 @@ subquestion: |
 fields:
   - "Relationship to ${child.name_full()}": caregivers[i].relationship
     maxlength: 30
+  - note: |
+      **Important:** You must give notice to ${child.name_full()}'s adult relatives or short-term guardians. If you do not, the guardianship may be delayed or denied.
   - "For notice purposes, ${caregivers[i].name_full()} is:": caregivers[i].notice_relationship
     input type: radio
     choices: 
       - "${ child.name_full()}'s **sibling** who is at least 18 years old": sibling
-      - "Some **other adult**, not ${ child.name_full()}'s sibling, who has had legal or physical custody of ${ child.name_full()}": custody
+      - "Some **other adult**, not ${ child.name_full()}'s sibling, who has had **legal or physical custody** of ${ child.name_full()}": custody
       - "A person with a **different relationship** to ${ child.name_full() }": other
   - "Is ${caregivers[i].name_full()} related to to ${child.name_full()} through blood or marriage?": caregivers[i].is_family
     datatype: yesnoradio
@@ -1926,11 +1938,13 @@ subquestion: |
 fields:
   - "Relationship to ${child.name_full()}": adult_relatives[i].relationship
     maxlength: 30
+  - note: |
+      **Important:** You must give notice to ${child.name_full()}'s adult relatives or short-term guardians. If you do not, the guardianship may be delayed or denied.
   - "For notice purposes, ${adult_relatives[i].name_full()} is:": adult_relatives[i].notice_relationship
     input type: radio
     choices: 
       - "${ child.name_full()}'s **sibling** who is at least 18 years old": sibling
-      - "Some **other adult**, not ${ child.name_full()}'s sibling, who has had legal or physical custody of ${ child.name_full()}": custody
+      - "Some **other adult**, not ${ child.name_full()}'s sibling, who has had **legal or physical custody** of ${ child.name_full()}": custody
       - "A person with a **different relationship** to ${ child.name_full() }": other
 ---
 id: notice agrees
@@ -2246,7 +2260,7 @@ question: |
 subquestion: |
   Your court date could be in person, by phone, or by video. If your court date is by phone or video, it is called a "Remote Appearance."
   
-  Enter the court date details below. If the clerk did not give you this information yet, leave it blank. You can add it to the *Notice of Hearing on Petition for Guardianship of a Minor* after you file your petition.
+  If the clerk did not give you the court date details yet, leave it blank. You can add it to the *Notice of Hearing on Petition for Guardianship of a Minor* after you file your petition.
   
   **Note:** Be sure to add the hearing information to your *Notice of Hearing on Petition for Guardianship of a Minor* before you send it to other parties in your case.
 
