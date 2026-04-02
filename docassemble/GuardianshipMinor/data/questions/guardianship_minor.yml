@@ -67,7 +67,6 @@ code: |
     child_too_old
   if child.address.state != 'IL':
     child_outside_illinois
-    child.address.known = True
   
   previous_standby
   current_stg
@@ -84,9 +83,9 @@ code: |
     guardian_too_young
   if users[0].is_willing == False:
     guardian_not_willing
+  get_address(users[0], child)
   if users[0].lives_with_child:
     users[0].relationship
-  users[0].address.known = True
   users[0].job
   users[0].is_disabled
   
@@ -104,9 +103,9 @@ code: |
       co_guardian_too_young
     else:
       if users[1].is_willing:
+        get_address(users[1], child)
         if users[1].lives_with_child:
           users[1].relationship
-        users[1].address.known = True
         users[1].job
         users[1].is_disabled
         users[1].found_negligent
@@ -255,10 +254,9 @@ code: |
   reconsider('snapshot_interview_state')
   snapshot_forms = True
 ---
-code: |
-  chair = True
-
-
+# why is this here?
+#code: |
+#  chair = True
 ---
 id: welcome
 question: |
@@ -439,6 +437,12 @@ fields:
 ---
 code: |
   child.address.known = True
+---
+code: |
+  users[0].address.known = True
+---
+code: |
+  users[1].address.known = True
 ---
 id: child outside illinois kick out
 event: child_outside_illinois
@@ -1342,6 +1346,7 @@ code: |
     if caregivers.there_are_any:
       for caregiver in caregivers:
         if caregiver.is_family or caregiver.is_stg:
+          caregiver.address = child.address.copy_deep(caregiver.attr_name('address'))
           temp_list.append(caregiver)    	  
     if adult_relatives.there_are_any:
       for adult_relative in adult_relatives:
@@ -1482,45 +1487,32 @@ buttons:
   - Exit: exit
   - Restart: restart
 ---
-id: user address
+id: user live with child
 question: |
-  Your current address
+  Do you live with ${child.name_full()}?
 subquestion: |
-  **Note:** This address will appear on your court papers.
+  You said ${child.name_full()} lives at ${child.address.on_one_line(bare=True)}.
 fields:
   - "Do you live with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**?": users[0].lives_with_child
     datatype: yesnoradio
-  - note:
-      What is your current address?
-    show if:
-      variable: users[0].lives_with_child
-      is: False
+---
+id: user address
+question: |
+  What is your current address?
+subquestion: |
+  **Note:** This address will appear on your court papers.
+fields:
   - Street address: users[0].address.address
     address autocomplete: True
-    show if:
-      variable: users[0].lives_with_child
-      is: False
   - Address line 2: users[0].address.unit
     required: False
-    show if:
-      variable: users[0].lives_with_child
-      is: False
   - City: users[0].address.city
-    show if:
-      variable: users[0].lives_with_child
-      is: False
   - State: users[0].address.state
     code: |
       states_list()
     default: IL
-    show if:
-      variable: users[0].lives_with_child
-      is: False
   - ZIP code: users[0].address.zip
     required: False
-    show if:
-      variable: users[0].lives_with_child
-      is: False
 ---
 id: guardian job
 question: |
@@ -1865,45 +1857,32 @@ subquestion: |
 
   Click **Back** if you made a mistake, or click **Next** to continue making forms for you as the guardian.
 ---
-id: co-guardian address
+id: co-guardian lives with child
 question: |
-  ${users[1].name_full()}'s current address
+  Does ${users[1].name_full()} live with ${child.name_full()}?
 subquestion: |
-  **Note:** This address will appear on your court papers.
+  You said ${child.name_full()} lives at ${child.address.on_one_line(bare=True)}.
 fields:
   - "Does ${users[1].name_full()} live with ${child.name_full()} at[NEWLINE] **${child.address.on_one_line(bare=True)}**?": users[1].lives_with_child
     datatype: yesnoradio
-  - note:
-      What is ${users[1].name_full()}'s current address?
-    show if:
-      variable: users[1].lives_with_child
-      is: False
+---
+id: co-guardian address
+question: |
+  What is ${users[1].name_full()}'s current address?
+subquestion: |
+  **Note:** This address will appear on your court papers.
+fields:
   - Street address: users[1].address.address
     address autocomplete: True
-    show if:
-      variable: users[1].lives_with_child
-      is: False
   - Address line 2: users[1].address.unit
     required: False
-    show if:
-      variable: users[1].lives_with_child
-      is: False
   - City: users[1].address.city
-    show if:
-      variable: users[1].lives_with_child
-      is: False
   - State: users[1].address.state
     code: |
       states_list()
     default: IL
-    show if:
-      variable: users[1].lives_with_child
-      is: False
   - ZIP code: users[1].address.zip
     required: False
-    show if:
-      variable: users[1].lives_with_child
-      is: False
 ---
 id: co-guardian job
 question: |
@@ -2793,7 +2772,7 @@ attachment:
     - "child_admin_no": ${ not immigration_separation }
     - "child_admin_yes": ${ immigration_separation }
     - "guardian_name": ${ users[0].name_full() }
-    - "guardian_address": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "guardian_address": ${ users[0].address.on_one_line(bare=True) }
     - "guardian_age": ${ users[0].age_in_years() }
     - "guardian_job": ${ users[0].job }
     - "guardian_disabled_yes": ${ users[0].is_disabled }
@@ -2813,11 +2792,7 @@ attachment:
     - "co_guardian_name": ${ users[1].name_full() if add_co_guardian and valid_co_guardian() else ""}
     - "co_guardian_address": |
         % if add_co_guardian and valid_co_guardian():
-        % if users[1].lives_with_child:
-        ${ child.address.on_one_line(bare=True) }
-        % else:
         ${ users[1].address.on_one_line(bare=True) }
-        % endif
         % else:
         ${ "" }
         % endif
@@ -2843,7 +2818,7 @@ attachment:
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
-    - "user_address": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
 ---
 attachment:
   variable name: additional_relatives[i]
@@ -3030,7 +3005,7 @@ attachment:
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
-    - "user_address": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
 ---
 attachment:
   variable name: oath_co_guardian[i]
@@ -3070,7 +3045,7 @@ attachment:
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
-    - "user_address": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
 ---
 attachment:
   variable name: oath_and_bond_co_guardian[i]
@@ -3098,7 +3073,7 @@ attachment:
   name: consent
   filename: consent
   skip undefined: True
-  editable: False
+  editable: True
   pdf template file: consent_and_appearance.pdf
   fields:
     - "county": ${ trial_court.address.county }
@@ -3167,7 +3142,7 @@ attachment:
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
-    - "user_address": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
 
     - "delivery_party_name_0": ${ notice_parties[0].name_full() }
     - "is_delivery_party_parent_0": ${ True if notice_parties[0].notice_relationship == "parent" else "" }
@@ -3375,7 +3350,7 @@ attachment:
     - "for_self_2": ${ True }
     - "user_phone_2": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email_2": ${ users[0].email if users[0].has_email_address else "" }
-    - "user_address_2": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "user_address_2": ${ users[0].address.on_one_line(bare=True) }
 ---
 generic object: ALIndividual
 attachment:
@@ -3455,7 +3430,7 @@ attachment:
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
-    - "user_address": ${ child.address.on_one_line(bare=True) if users[0].lives_with_child else users[0].address.on_one_line(bare=True) }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
 
 ---
 attachment:
@@ -3466,9 +3441,23 @@ attachment:
   editable: True
   pdf template file: newspaper_publication_letter.pdf
   fields:
+    - "user_name": ${ users[0].name_full() }
+    - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
+    - "user_email": ${ users[0].email if users[0].has_email_address else "" }
+    - "user_address": ${ users[0].address.on_one_line(bare=True) }
     - "county": ${ trial_court.address.county }
     - "case_number": ${ "" }
     - "child_name": ${ child.name_full() }
+    - "courthouse_address": |
+        % if has_court_date:
+        % if courtroom != "":          
+        ${ courthouse_info + ", Room # " + courtroom }
+        % endif
+        % else:
+        ${ courthouse_info }          
+        % endif
+    - "clerk_phone": ${ trial_court.phone }
+    - "clerk_website": ${ trial_court.website }
       
 ---
 attachment:
@@ -3569,12 +3558,12 @@ review:
       ${word(yesno(users[0].is_willing))}
   - Edit: users[0].lives_with_child
     button: |
+      **Do you live with ${child.name_full()}?**
+      ${word(yesno(users[0].lives_with_child))}
+  - Edit: users[0].address.address
+    button: |
       **Your address:**[NEWLINE]
-      % if users[0].lives_with_child:
-      ${ child.address.on_one_line(bare=True) }
-      % else:
       ${ users[0].address.on_one_line(bare=True) }
-      % endif
   - Edit: users[0].relationship
     button: |
       **Your relationship to ${child.name_full()}:**
@@ -3656,12 +3645,13 @@ review:
     show if: add_co_guardian
   - Edit: users[1].lives_with_child
     button: |
+      **Does ${ users[1].name_full() } live with ${child.name_full()}?**
+      ${word(yesno(users[1].lives_with_child))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+  - Edit: users[1].address.address
+    button: |
       **${ users[1].name_full() }'s address:**[NEWLINE]
-      % if users[1].lives_with_child:
-      ${ child.address.on_one_line(bare=True) }
-      % else:
       ${ users[1].address.on_one_line(bare=True) }
-      % endif
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].relationship
     button: |
@@ -4825,12 +4815,12 @@ review:
       ${word(yesno(users[0].is_willing))}
   - Edit: users[0].lives_with_child
     button: |
+      **Do you live with ${child.name_full()}?**
+      ${word(yesno(users[0].lives_with_child))}
+  - Edit: users[0].address.address
+    button: |
       **Your address:**[NEWLINE]
-      % if users[0].lives_with_child:
-      ${ child.address.on_one_line(bare=True) }
-      % else:
       ${ users[0].address.on_one_line(bare=True) }
-      % endif
   - Edit: users[0].relationship
     button: |
       **Your relationship to ${child.name_full()}:**
@@ -4912,12 +4902,13 @@ review:
     show if: add_co_guardian
   - Edit: users[1].lives_with_child
     button: |
+      **Does ${ users[1].name_full() } live with ${child.name_full()}?**
+      ${word(yesno(users[1].lives_with_child))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+  - Edit: users[1].address.address
+    button: |
       **${ users[1].name_full() }'s address:**[NEWLINE]
-      % if users[1].lives_with_child:
-      ${ child.address.on_one_line(bare=True) }
-      % else:
       ${ users[1].address.on_one_line(bare=True) }
-      % endif
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].relationship
     button: |
