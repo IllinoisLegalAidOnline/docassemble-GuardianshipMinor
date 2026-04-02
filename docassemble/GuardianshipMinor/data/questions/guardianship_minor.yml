@@ -86,6 +86,7 @@ code: |
     guardian_not_willing
   if users[0].lives_with_child:
     users[0].relationship
+  users[0].address.known = True
   users[0].job
   users[0].is_disabled
   
@@ -105,6 +106,7 @@ code: |
       if users[1].is_willing:
         if users[1].lives_with_child:
           users[1].relationship
+        users[1].address.known = True
         users[1].job
         users[1].is_disabled
         users[1].found_negligent
@@ -1078,9 +1080,15 @@ id: any adult relatives
 question: |  
   ${child.name_full()}'s adult relatives and short-term guardian, if any
 subquestion: |
-  % if caregivers.there_are_any or has_legal_parent:
+  % if (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or caregivers.there_are_any or has_legal_parent:
   So far you have told us about: 
 
+  % if users[0].is_family or users[0].is_stg:
+  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % endif
+  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  * ${ users[1].name_full() }, ${users[1].relationship}
+  % endif
   % if has_legal_parent:
   * ${ parents[0].name_full()}, Parent
   % if has_second_parent:
@@ -1132,9 +1140,15 @@ question: |
   Who is another adult relative of ${child.name_full()}?
   % endif
 subquestion: |
-  % if caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
+  % if (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
   So far you have told us about: 
 
+  % if users[0].is_family or users[0].is_stg:
+  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % endif
+  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  * ${ users[1].name_full() }, ${users[1].relationship}
+  % endif
   % if has_legal_parent:
   * ${ parents[0].name_full()}, Parent
   % if has_second_parent:
@@ -1145,9 +1159,9 @@ subquestion: |
   % if person.is_family or person.is_stg:
   * ${person.name_full()}, ${person.relationship}
   % endif    
-  % for x in range(adult_relatives.number() - 1):
-  * ${adult_relatives[x].name_full()}, ${adult_relatives[x].relationship}
   % endfor
+  % for x in range(adult_relatives.number_gathered() - 1):
+  * ${adult_relatives[x].name_full()}, ${adult_relatives[x].relationship}
   % endfor
   
   % endif
@@ -1186,6 +1200,12 @@ question: |
 subquestion: |
   So far you have told us about:
 
+  % if users[0].is_family or users[0].is_stg:
+  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % endif
+  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  * ${ users[1].name_full() }, ${users[1].relationship}
+  % endif
   % if has_legal_parent:
   * ${ parents[0].name_full()}, Parent
   % if has_second_parent:
@@ -1197,10 +1217,10 @@ subquestion: |
   * ${person.name_full()}, ${person.relationship}
   % endif    
   % endfor
-  % for adult in adult_relatives:
-  * ${adult.name_full()}, ${adult.relationship}
+  % for person in adult_relatives:
+  * ${person.name_full()}, ${person.relationship}
   % endfor
-
+  
   **Important:**
 
   * Include ${child.name_full()}'s parents, adult brothers and sisters.
@@ -1220,10 +1240,19 @@ code: |
       if person.is_family or person.is_stg:
         total += 1
     return total
+---
+code: |
+  def number_users_family_or_stg():
 
+    total = 0
+    if users[0].is_family or users[0].is_stg:
+        total += 1
+    if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+        total += 1
+    return total
 ---
 code: |  
-  if adult_relatives.number_gathered() >= (10 - number_others_live_with_child() - number_caregivers_family_or_stg()):
+  if adult_relatives.number_gathered() >= (10 - number_others_live_with_child() - number_caregivers_family_or_stg() - number_users_family_or_stg() ):
     adult_relatives.there_is_another = False
 ---
 # consent only for Yes agrees not idk - change?
@@ -1300,6 +1329,10 @@ code: |
   if minor_is_married:
     temp_list.append(spouse)
   else:
+    if users[0].is_family or users[0].is_stg:
+      temp_list.append(users[0])
+    if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+      temp_list.append(users[1])
     if has_legal_parent:
       if not parents[0].is_dead:
         temp_list.append(parents[0])
@@ -2056,6 +2089,10 @@ question: |
 fields:
   - "Your relationship to ${child.name_full()}": users[0].relationship
     maxlength: 30
+  - "Are you related to to ${child.name_full()} through blood or marriage?": users[0].is_family
+    datatype: yesnoradio
+  - "Are you ${child.name_full()}'s short-term guardian?": users[0].is_stg
+    datatype: yesnoradio
 ---
 id: co-guardian relationship
 question: |
@@ -2063,6 +2100,10 @@ question: |
 fields:
   - "${users[1].name_full()}'s relationship to ${child.name_full()}": users[1].relationship
     maxlength: 30
+  - "Is ${users[1].name_full()} related to to ${child.name_full()} through blood or marriage?": users[1].is_family
+    datatype: yesnoradio
+  - "Is ${users[1].name_full()} the short-term guardian of ${child.name_full()}?": users[1].is_stg
+    datatype: yesnoradio
 ---
 id: notice agrees
 generic object: ALIndividual
@@ -3539,7 +3580,16 @@ review:
       **Your relationship to ${child.name_full()}:**
       ${ users[0].relationship }
     show if: users[0].lives_with_child
-      
+  - Edit: users[0].is_family
+    button: |
+      **Are you related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(users[0].is_family))}
+    show if: users[0].lives_with_child
+  - Edit: users[0].is_stg
+    button: |
+      **Are you the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(users[0].is_stg))}      
+    show if: users[0].lives_with_child
   - Edit: users[0].job
     button: |
       **What is your current job?**
@@ -3618,7 +3668,16 @@ review:
       **${ users[1].name_full() }'s relationship to ${child.name_full()}:**
       ${ users[1].relationship }
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
-      
+  - Edit: users[1].is_family
+    button: |
+      **Is ${ users[1].name_full() } related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(users[1].is_family))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_stg
+    button: |
+      **Is ${ users[1].name_full() } the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_stg))}      
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child      
   - Edit: users[1].job
     button: |
       **What is ${ users[1].name_full() }'s current job?**
@@ -3937,7 +3996,7 @@ review:
     
   - Edit: adult_relatives.there_are_any
     button: |
-      **Does ${child.name_full()} have any adult relatives?**
+      **Does ${child.name_full()} have any adult relatives or a short-term guardian?**
       ${ word(yesno(adult_relatives.there_are_any))}
     show if: not minor_is_married
   - Edit: adult_relatives.revisit
@@ -4234,7 +4293,7 @@ question: |
 subquestion: |  
   ${ adult_relatives.table }
 
-  % if adult_relatives.number_gathered() < (10 - number_others_live_with_child() - number_caregivers_family_or_stg()):
+  % if adult_relatives.number_gathered() < (10 - number_others_live_with_child() - number_caregivers_family_or_stg() - number_users_family_or_stg() ):
   ${ adult_relatives.add_action() }
   % endif
 ---
@@ -4731,7 +4790,7 @@ review:
     show if: caregivers.there_are_any    
   - Edit: adult_relatives.there_are_any
     button: |
-      **Does ${child.name_full()} have any adult relatives?**
+      **Does ${child.name_full()} have any adult relatives or a short-term guardian?**
       ${ word(yesno(adult_relatives.there_are_any))}
     show if: not minor_is_married
   - Edit: adult_relatives.revisit
@@ -4776,7 +4835,17 @@ review:
     button: |
       **Your relationship to ${child.name_full()}:**
       ${ users[0].relationship }
-    show if: users[0].lives_with_child      
+    show if: users[0].lives_with_child
+  - Edit: users[0].is_family
+    button: |
+      **Are you related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(users[0].is_family))}
+    show if: users[0].lives_with_child
+  - Edit: users[0].is_stg
+    button: |
+      **Are you the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(users[0].is_stg))}      
+    show if: users[0].lives_with_child
   - Edit: users[0].job
     button: |
       **What is your current job?**
@@ -4854,7 +4923,17 @@ review:
     button: |
       **${ users[1].name_full() }'s relationship to ${child.name_full()}:**
       ${ users[1].relationship }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child    
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_family
+    button: |
+      **Is ${ users[1].name_full() } related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(users[1].is_family))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_stg
+    button: |
+      **Is ${ users[1].name_full() } the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_stg))}      
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
   - Edit: users[1].job
     button: |
       **What is ${ users[1].name_full() }'s current job?**
