@@ -845,9 +845,15 @@ question: |
 subquestion: | 
   You said ${ child.name_full()} lives at ${ child.address.on_one_line(bare=True)}.
 
-  % if parent_lives_with_child() or minor_is_married:
+  % if users[0].lives_with_child or (valid_co_guardian() and users[1].lives_with_child) or parent_lives_with_child() or minor_is_married:
   You already told us about:
 
+  % if users[0].lives_with_child:
+  * You ( ${ users[0].name_full() })
+  % endif
+  % if valid_co_guardian() and users[1].lives_with_child:
+  * ${ users[1].name_full() }
+  % endif  
   % if parent_lives_with_child():
   % if parents[0].address.known:
   % if parents[0].lives_with_child:
@@ -910,9 +916,15 @@ question: |
   Who is another adult that lives with ${child.name_full()}?  
   % endif
 subquestion: |
-  % if i>0 or parent_lives_with_child() or minor_is_married:
+  % if i>0 or users[0].lives_with_child or (valid_co_guardian() and users[1].lives_with_child) or parent_lives_with_child() or minor_is_married:
   So far you have told us about:
 
+  % if users[0].lives_with_child:
+  * You ( ${ users[0].name_full() })
+  % endif
+  % if valid_co_guardian() and users[1].lives_with_child:
+  * ${ users[1].name_full() }
+  % endif  
   % if parent_lives_with_child():
   % if parents[0].address.known:
   % if parents[0].lives_with_child:
@@ -950,6 +962,12 @@ question: |
 subquestion: |
   So far you have told us about:
 
+  % if users[0].lives_with_child:
+  * You ( ${ users[0].name_full() })
+  % endif
+  % if valid_co_guardian() and users[1].lives_with_child:
+  * ${ users[1].name_full() }
+  % endif  
   % if parent_lives_with_child():
   % if parents[0].address.known:  
   % if parents[0].lives_with_child:
@@ -985,7 +1003,11 @@ fields:
 code: |
   def number_others_live_with_child():
     total_others = 0
-  
+
+    if users[0].lives_with_child:
+      total_others += 1
+    if valid_co_guardian() and users[1].lives_with_child:
+      total_others += 1
     if has_legal_parent:
       if parents[0].address.known:  
         if parents[0].lives_with_child:
@@ -1054,7 +1076,7 @@ fields:
 ---
 id: any adult relatives
 question: |  
-  ${child.name_full()}'s adult relatives
+  ${child.name_full()}'s adult relatives and short-term guardian, if any
 subquestion: |
   % if caregivers.there_are_any or has_legal_parent:
   So far you have told us about: 
@@ -1244,6 +1266,11 @@ reconsider: True
 code: |
   temp_list = []
 
+  if users[0].lives_with_child:
+    temp_list.append(users[0])
+  if valid_co_guardian() and users[1].lives_with_child:
+    temp_list.append(users[1])
+  
   if has_legal_parent:
     if not parents[0].is_dead:
       if parents[0].address.known:
@@ -2703,7 +2730,7 @@ attachment:
     - "parent_last_contact_date_0": ${ parents[0].last_contact_date if has_legal_parent and parents[0].not_found else "" }
     - "parent_last_contact_location_0": ${ parents[0].last_contact_location if has_legal_parent and parents[0].not_found else "" }
     - "parent_unable_0": ${ True if has_legal_parent and parents[0].unable else "" }
-    - "one_parent_cb": ${ True if has_legal_parent and parents.number() == 1 else "" }
+    - "one_parent_cb": ${ True if has_legal_parent and not has_second_parent else "" }
     - "two_parents_cb": ${ True if has_legal_parent and has_second_parent else "" }
     - "parent_name_1": ${ parents[1].name_full() if has_legal_parent and has_second_parent else "" }
     - "parent_agrees_1": ${ True if has_legal_parent and has_second_parent and parents[1].agrees else "" }
