@@ -75,7 +75,7 @@ code: |
   guardianship_type
   child_estate
 
-  set_progress(50)
+  set_progress(40)
   nav.set_section('section_guardian')
   guardian_intro
   users[0].name.first
@@ -126,7 +126,7 @@ code: |
       bond_info
   
   
-  set_progress(75)
+  set_progress(70)
   nav.set_section('section_family')
   notice_intro
   if has_legal_parent:
@@ -478,7 +478,7 @@ question: |
 subquestion: |
   Parents can have a written agreement for someone to temporarily be the guardian without any court involvement. This is called a **short-term guardianship**.
 
-  If ${child.name_full()} has a current short-term guardian, you may need to enter their information on another screen.
+  If ${child.name_full()} has a current short-term guardian, you will need to enter their information on other screens.
 
   **Note:** If a short-term guardian was appointed, you will need to attach the written agreement when you file your *${ form_name }*.
 fields:
@@ -1407,8 +1407,6 @@ question: |
   Information about the guardian
 subquestion: |
   The next screens will ask questions about you, the person who wants to be ${child.name_full()}'s guardian. If you want the court to appoint a co-guardian, you can enter their information as well.
-
-  **Note:** You may have entered some of this information already if you live with or are related to ${child.name_full()}. It is important that it is included in both places.
 
   Then we will go over the responsibilities of being appointed a court-ordered guardian.
 ---
