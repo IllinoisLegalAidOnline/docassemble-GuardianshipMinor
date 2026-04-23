@@ -1315,10 +1315,9 @@ code: |
           if parents[1].lives_with_child:
             temp_list.append(parents[1]) 
   if minor_is_married:
-    if spouse.lives_with_child:
-      if spouse.address.known:
-        if spouse.lives_with_child:
-          temp_list.append(spouse)
+    if spouse.address.known:
+      if spouse.lives_with_child:
+        temp_list.append(spouse)
   if caregivers.there_are_any:
     for caregiver in caregivers:
       temp_list.append(caregiver)    	  
@@ -3426,6 +3425,7 @@ attachment:
     - "child_name": ${ child.name_full() }
     - "child_name_2": ${ child.name_full() }
     - "guardian_name": ${ users[0].name_full() }
+    - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
     - "user_name": ${ users[0].name_full() }
     - "for_self": ${ True }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
@@ -3441,6 +3441,7 @@ attachment:
   editable: True
   pdf template file: newspaper_publication_letter.pdf
   fields:
+    - "e_sign_name": ${ users[0].name_full() if e_signature else "" }
     - "user_name": ${ users[0].name_full() }
     - "user_phone": ${ phone_number_formatted(users[0].phone_number) }
     - "user_email": ${ users[0].email if users[0].has_email_address else "" }
