@@ -314,7 +314,7 @@ question: |
 subquestion: |
   Usually, only the parents of a child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a **{plenary guardian}** to care for and make decisions for the child.
 
-  A guardian of the **person** is responsible for the dhild's:
+  A guardian of the **person** is responsible for the child's:
 
   * Safety,
   * Physical and emotional well-being,
@@ -350,7 +350,7 @@ subquestion: |
 
   After you file the *${ form_name }* and get a court date, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
 
-  Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
+  Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's best interest to appoint you as their guardian. 
   
   **Note:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local Circuit Clerk for details. To learn more, read the instructions you can download at the end of this program. 
 ---
@@ -563,7 +563,7 @@ fields:
     show if:
       variable: child_estate
       is: 'amount'
-  - "What is the ${child.name_full()}'s annual income, including Social Security, SSI, and other public benefits?": child_income
+  - "What is ${child.name_full()}'s annual income, including Social Security, SSI, and other public benefits?": child_income
     input type: radio
     choices:
       - "I don't know the amount of ${child.name_full()}'s income.": unknown
@@ -830,7 +830,7 @@ subquestion: |
   * Divorce,
   * Custody,
   * Parentage,
-  * child support,
+  * Child support,
   * Orders of Protection,
   * Juvenile,
   * DCFS (Department of Children & Family Services), and
@@ -1395,7 +1395,7 @@ subquestion: |
 
   Once you filed the *${ form_name }* and get a court date, you will need to give notice to or obtain written consent from all interested parties, including the child's parents and close relatives. This ensures that everyone involved is aware of the guardianship case and has a chance to respond or appear in court.
 
-  Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's interest to appoint you as their guardian. 
+  Finally, you will need to attend a court hearing where a judge will consider all the reasons why it is in the child's best interest to appoint you as their guardian. 
   
   **Reminder:** Filing forms, scheduling court dates, and giving notice are done differently depending on where you live. You may need to ask your local Circuit Clerk for details. To learn more, read the instructions you download on an upcoming screen. 
  
@@ -1523,7 +1523,7 @@ fields:
 ---
 id: guardian disabled
 question: |
-  Has a judge found you disabled and appointed you a Guardian?
+  Has a judge found you disabled and appointed a Guardian for you?
 subquestion: |
   It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
 fields:
@@ -1931,7 +1931,7 @@ subquestion: |
   % endif
 
   % if guardianship_type != "person":
-  Since you are asking to become guardian of ${ child.name_full() }'s estate, you will need to post a bond. A bond is a financial guarantee that you will manage the ${ child.name_full() }'s property in their best interests. The judge will tell you the bond type and amount. 
+  Since you are asking to become guardian of ${ child.name_full() }'s estate, you will need to post a bond. A bond is a financial guarantee that you will manage ${ child.name_full() }'s property in their best interests. The judge will tell you the bond type and amount. 
   % endif
   
   You can download the Oath forms at the end of the program.
@@ -2002,12 +2002,12 @@ question: |
   Bond required for guardianship of the estate
 subquestion: |
   % if valid_co_guardian():
-  A bond is a financial guarantee that you and ${ users[1].name_full() } will manage the ${ child.name_full() }'s property in their best interests.
+  A bond is a financial guarantee that you and ${ users[1].name_full() } will manage ${ child.name_full() }'s property in their best interests.
   % else:
-  A bond is a financial guarantee that you will manage the ${ child.name_full() }'s property in their best interests.
+  A bond is a financial guarantee that you will manage ${ child.name_full() }'s property in their best interests.
   % endif
   
-  There are different types of bonds. The bond amount is usually around 1.5 to two times the value of ${ child.name_full() }'s estate. 
+  There are different types of bonds. The bond amount is usually around 1.5 to 2 times the value of ${ child.name_full() }'s estate. 
   
   The judge will tell you the amount and type of bond required.
 ---
@@ -2027,6 +2027,8 @@ question: |
   What is ${caregivers[i].name_full()}'s relationship to ${child.name_full()}?
 subquestion: |
   This is used in the *${ form_name }* and the *Notice of Hearing on Petition for Guardianship of a Minor*. Each form asks for different information so some of this may be repetitive.
+
+  **Note:** If ${caregivers[i].name_full()} is not related to ${child.name_full()}, briefly explain how they are connected. Examples include Adult caregiver's roommate or Grandfather's friend's adult child. You can also enter "none" or "no relation" and explain it to the judge.
 fields:
   - "Relationship to ${child.name_full()}": caregivers[i].relationship
     maxlength: 30
@@ -3583,7 +3585,7 @@ review:
       ${users[0].job}
   - Edit: users[0].is_disabled
     button: |
-      **Has a judge found you disabled and appointed you a Guardian?**
+      **Has a judge found you disabled and appointed a Guardian for you?**
       ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].found_negligent
     button: |
@@ -3618,10 +3620,6 @@ review:
       **Your email:**
       ${ users[0].email }
     show if: users[0].has_email_address
-  - Edit: e_signature
-    button: |
-      **Do you want to add your e-signature to your forms?**
-      ${ word(yesno(e_signature)) }
   - Edit: add_co_guardian
     button: |
       **Do you want someone to be a co-guardian of ${child.name_full()} with you?**
@@ -3673,7 +3671,7 @@ review:
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].is_disabled
     button: |
-      **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
+      **Has a judge found ${ users[1].name_full() } disabled and appointed a Guardian for them?**
       ${ word(yesno(users[1].is_disabled))}
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].found_negligent
@@ -4840,7 +4838,7 @@ review:
       ${users[0].job}
   - Edit: users[0].is_disabled
     button: |
-      **Has a judge found you disabled and appointed you a Guardian?**
+      **Has a judge found you disabled and appointed a Guardian for you?**
       ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].found_negligent
     button: |
@@ -4930,7 +4928,7 @@ review:
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].is_disabled
     button: |
-      **Has a judge found ${ users[1].name_full() } disabled and appointed them a Guardian?**
+      **Has a judge found ${ users[1].name_full() } disabled and appointed a Guardian for them?**
       ${ word(yesno(users[1].is_disabled))}
     show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].found_negligent
