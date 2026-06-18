@@ -1132,6 +1132,14 @@ subquestion: |
 fields:
   - "Any other adult relatives?": adult_relatives.there_are_any
     datatype: yesnoradio
+    show if:
+      code: |
+        (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) )
+  - "Any adult relatives?": adult_relatives.there_are_any
+    datatype: yesnoradio
+    show if:
+      code: |
+        not ((users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) ) )
 
 ---
 code: |
