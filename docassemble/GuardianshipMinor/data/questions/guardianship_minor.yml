@@ -859,7 +859,7 @@ subquestion: |
   You already told us about:
 
   % if users[0].lives_with_child:
-  * You ( ${ users[0].name_full() })
+  * You (${ users[0].name_full() })
   % endif
   % if valid_co_guardian() and users[1].lives_with_child:
   * ${ users[1].name_full() }
@@ -938,7 +938,7 @@ subquestion: |
   So far you have told us about:
 
   % if users[0].lives_with_child:
-  * You ( ${ users[0].name_full() })
+  * You (${ users[0].name_full() })
   % endif
   % if valid_co_guardian() and users[1].lives_with_child:
   * ${ users[1].name_full() }
@@ -981,7 +981,7 @@ subquestion: |
   So far you have told us about:
 
   % if users[0].lives_with_child:
-  * You ( ${ users[0].name_full() })
+  * You (${ users[0].name_full() })
   % endif
   % if valid_co_guardian() and users[1].lives_with_child:
   * ${ users[1].name_full() }
@@ -1096,13 +1096,13 @@ id: any adult relatives
 question: |  
   ${child.name_full()}'s adult relatives and short-term guardian, if any
 subquestion: |
-  % if (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or caregivers.there_are_any or has_legal_parent:
+  % if (getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False))) or caregivers.there_are_any or has_legal_parent:
   So far you have told us about: 
 
-  % if users[0].is_family or users[0].is_stg:
-  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
+  * You (${ users[0].name_full() }, ${users[0].relationship})
   % endif
-  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  % if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
   * ${ users[1].name_full() }, ${users[1].relationship}
   % endif
   % if has_legal_parent:
@@ -1134,12 +1134,12 @@ fields:
     datatype: yesnoradio
     show if:
       code: |
-        (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) )
+        (getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) )
   - "Any adult relatives?": adult_relatives.there_are_any
     datatype: yesnoradio
     show if:
       code: |
-        not ((users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) ) )
+        not ((getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) ) )
 
 ---
 code: |
@@ -1164,13 +1164,13 @@ question: |
   Who is another adult relative of ${child.name_full()}?
   % endif
 subquestion: |
-  % if (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
+  % if (getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False))) or caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
   So far you have told us about: 
 
-  % if users[0].is_family or users[0].is_stg:
-  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
+  * You (${ users[0].name_full() }, ${users[0].relationship})
   % endif
-  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  % if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
   * ${ users[1].name_full() }, ${users[1].relationship}
   % endif
   % if has_legal_parent:
@@ -1224,10 +1224,10 @@ question: |
 subquestion: |
   So far you have told us about:
 
-  % if users[0].is_family or users[0].is_stg:
-  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
+  * You (${ users[0].name_full() }, ${users[0].relationship})
   % endif
-  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  % if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
   * ${ users[1].name_full() }, ${users[1].relationship}
   % endif
   % if has_legal_parent:
@@ -1269,9 +1269,9 @@ code: |
   def number_users_family_or_stg():
 
     total = 0
-    if users[0].is_family or users[0].is_stg:
+    if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
         total += 1
-    if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+    if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
         total += 1
     return total
 ---
@@ -1352,9 +1352,9 @@ code: |
   if minor_is_married:
     temp_list.append(spouse)
   else:
-    if users[0].is_family or users[0].is_stg:
+    if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
       temp_list.append(users[0])
-    if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+    if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
       temp_list.append(users[1])
     if has_legal_parent:
       if not parents[0].is_dead:
