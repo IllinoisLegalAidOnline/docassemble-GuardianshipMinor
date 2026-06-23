@@ -81,17 +81,15 @@ code: |
   users[0].name.first
   if users[0].age_in_years() < 18:
     guardian_too_young
+  if users[0].is_disabled:
+    guardian_disabled_kickout
   if users[0].is_willing == False:
     guardian_not_willing
   get_address(users[0], child)
   if users[0].lives_with_child:
     users[0].relationship
   users[0].job
-  users[0].is_disabled
   
-  #waiting on SME input
-  #if users[0].is_disabled:
-  #  guardian_disabled_kickout
   
   users[0].found_negligent
   if users[0].has_felony_conviction:
@@ -102,18 +100,20 @@ code: |
     if users[1].age_in_years() < 18:
       co_guardian_too_young
     else:
-      if users[1].is_willing:
-        get_address(users[1], child)
-        if users[1].lives_with_child:
-          users[1].relationship
-        users[1].job
-        users[1].is_disabled
-        users[1].found_negligent
-        if users[1].has_felony_conviction:
-          users[1].felony_convictions.gather()
-        users[1].phone_number 
+      if users[1].is_disabled:
+        co_guardian_disabled
       else:
-        co_guardian_not_willing
+        if users[1].is_willing:
+          get_address(users[1], child)
+          if users[1].lives_with_child:
+            users[1].relationship
+          users[1].job
+          users[1].found_negligent
+          if users[1].has_felony_conviction:
+            users[1].felony_convictions.gather()
+          users[1].phone_number 
+        else:
+          co_guardian_not_willing
   
   oath_intro
   if guardianship_type != "estate":
@@ -266,7 +266,7 @@ subquestion: |
 
   This program helps you make a *${ form_name }*. Use it if you want a court to appoint you to be the **{plenary guardian}** of a minor child (under the age of 18). You can also use it if you want the court to appoint a co-guardian along with you.
   
-  **Note:** If you want guardianship of more than one child, you will have to make a separate set of forms for each child.
+  **Note:** If you want guardianship of more than one child, you will have to make a separate set of forms for each child. However, if the children live in the same home, you can usually file all forms into the same court case. You can ask your local Circuit Clerk for details.
  
   In Illinois, there are also standby and short-term guardianships. Each kind of guardianship has different requirements and responsibilities. To learn more, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 field: sees_nav_bar
@@ -314,7 +314,7 @@ question: |
 subquestion: |
   Usually, only the parents of a child have the authority to make day-to-day decisions for that child, including their money and property. When the parents are unwilling or unable to do this, a judge can appoint a **{plenary guardian}** to care for and make decisions for the child.
 
-  A guardian of the **person** is responsible for the child's:
+  A **guardian of the person** is responsible for the child's:
 
   * Safety,
   * Physical and emotional well-being,
@@ -323,7 +323,7 @@ subquestion: |
   * Nutrition, and
   * Medical care.
   
-  A guardian of the **estate** is responsible for the care, management, and investment of the child's money and property. This is only necessary if the child currently has money or property that needs to be managed. It does not include Social Security, SSI, or public benefits since control over those benefits is designated by the agency rather than the judge.
+  A **guardian of the estate** is responsible for the care, management, and investment of the child's money and property. This is only necessary if the child currently has money or property that needs to be managed. It does not include Social Security, SSI, or public benefits since control over those benefits is designated by the agency rather than the judge.
 
   A judge can appoint a guardian of the person, the estate, or both. They can also appoint another person to be a co-guardian with the guardian.
 
@@ -373,7 +373,7 @@ fields:
   - "Do you meet these requirements?": user_qualified
     datatype: yesnoradio
 ---
-id: ineligible guardian kick out
+id: ineligible guardian kickout
 event: ineligible_guardian
 question: |
   Sorry
@@ -403,7 +403,7 @@ fields:
     datatype: BirthDate
     alMax: ${ today().format("yyyy-MM-dd") }
 ---
-id: child too old kick out
+id: child too old kickout
 event: child_too_old
 question: |
   Sorry
@@ -444,7 +444,7 @@ code: |
 code: |
   users[1].address.known = True
 ---
-id: child outside illinois kick out
+id: child outside illinois kickout
 event: child_outside_illinois
 question: |
   Sorry
@@ -461,8 +461,10 @@ question: |
   Has a judge appointed a standby guardian for ${child.name_full()}?
 subquestion: |
   A court can appoint a person as a **standby guardian**. That person will become the guardian once the parents or current guardian are no longer able to care for the child.
-
+  
   **Note:** If a standby guardian was appointed, you will need to attach the court order when you file your *${ form_name }*.
+  
+  To learn more about the different kinds of guardianship, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 fields:
   - "Standby guardian appointed?": previous_standby
     datatype: yesnoradio
@@ -481,6 +483,8 @@ subquestion: |
   If ${child.name_full()} has a current short-term guardian, you will need to enter their information on other screens.
 
   **Note:** If a short-term guardian was appointed, you will need to attach the written agreement when you file your *${ form_name }*.
+
+  To learn more about the different kinds of guardianship, read ILAO's article about [**getting guardianship of a child**](https://www.illinoislegalaid.org/node/30531).
 fields:
   - "Short-term guardian for ${child.name_full()}?": current_stg
     datatype: yesnoradio
@@ -526,7 +530,7 @@ id: guardianship type
 question: |
   What kind of guardianship of ${child.name_full()} are you asking for?
 subquestion: |
-  A guardian of the **person** is responsible for ${child.name_full()}'s:
+  A **guardian of the person** is responsible for ${child.name_full()}'s:
 
   * Safety,
   * Physical and emotional well-being,
@@ -535,7 +539,7 @@ subquestion: |
   * Nutrition, and
   * Medical care.
 
-  A guardian of the **estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property. **Note:** This is only necessary if ${child.name_full()} currently has money or property you need permission to manage. You usually do not need to ask the judge to give you control over Social Security or public benefits, because control is designated by the agency rather than the judge.
+  A **guardian of the estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property. **Note:** This is only necessary if ${child.name_full()} currently has money or property you need permission to manage. You usually do not need to ask the judge to give you control over Social Security or public benefits, because control is designated by the agency rather than the judge.
 fields:
   - Guardianship type: guardianship_type
     input type: radio
@@ -847,15 +851,15 @@ code: |
 ---
 id: any caregivers
 question: |  
-  Are there any adults that live with ${ child.name_full()}?
+  Adults that live with ${ child.name_full()}
 subquestion: | 
-  You said ${ child.name_full()} lives at ${ child.address.on_one_line(bare=True)}.
+  You said ${ child.name_full()} lives at ${ child.address.on_one_line(bare=True)}. Any adults that live with them must be listed on your forms.
 
   % if users[0].lives_with_child or (valid_co_guardian() and users[1].lives_with_child) or parent_lives_with_child() or minor_is_married:
   You already told us about:
 
   % if users[0].lives_with_child:
-  * You ( ${ users[0].name_full() })
+  * You (${ users[0].name_full() })
   % endif
   % if valid_co_guardian() and users[1].lives_with_child:
   * ${ users[1].name_full() }
@@ -884,8 +888,16 @@ subquestion: |
   
   % endif  
 fields:
+  - "Any other adults live with ${ child.name_full()}?": caregivers.there_are_any
+    datatype: yesnoradio
+    show if:
+      code: |
+        users[0].lives_with_child or (valid_co_guardian() and users[1].lives_with_child) or parent_lives_with_child() or (minor_is_married and spouse.address.known and spouse.lives_with_child)
   - "Any adults live with ${ child.name_full()}?": caregivers.there_are_any
     datatype: yesnoradio
+    show if:
+      code: |
+        not (users[0].lives_with_child or (valid_co_guardian() and users[1].lives_with_child) or parent_lives_with_child() or (minor_is_married and spouse.address.known and spouse.lives_with_child))
 ---
 code: |
   def parent_lives_with_child():
@@ -926,7 +938,7 @@ subquestion: |
   So far you have told us about:
 
   % if users[0].lives_with_child:
-  * You ( ${ users[0].name_full() })
+  * You (${ users[0].name_full() })
   % endif
   % if valid_co_guardian() and users[1].lives_with_child:
   * ${ users[1].name_full() }
@@ -969,7 +981,7 @@ subquestion: |
   So far you have told us about:
 
   % if users[0].lives_with_child:
-  * You ( ${ users[0].name_full() })
+  * You (${ users[0].name_full() })
   % endif
   % if valid_co_guardian() and users[1].lives_with_child:
   * ${ users[1].name_full() }
@@ -1084,13 +1096,13 @@ id: any adult relatives
 question: |  
   ${child.name_full()}'s adult relatives and short-term guardian, if any
 subquestion: |
-  % if (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or caregivers.there_are_any or has_legal_parent:
+  % if (getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False))) or caregivers.there_are_any or has_legal_parent:
   So far you have told us about: 
 
-  % if users[0].is_family or users[0].is_stg:
-  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
+  * You (${ users[0].name_full() }, ${users[0].relationship})
   % endif
-  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  % if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
   * ${ users[1].name_full() }, ${users[1].relationship}
   % endif
   % if has_legal_parent:
@@ -1120,6 +1132,14 @@ subquestion: |
 fields:
   - "Any other adult relatives?": adult_relatives.there_are_any
     datatype: yesnoradio
+    show if:
+      code: |
+        (getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) )
+  - "Any adult relatives?": adult_relatives.there_are_any
+    datatype: yesnoradio
+    show if:
+      code: |
+        not ((getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)) or has_legal_parent or (caregivers.there_are_any and (any(caregiver.is_family or caregiver.is_stg) for caregiver in caregivers) ) )
 
 ---
 code: |
@@ -1144,13 +1164,13 @@ question: |
   Who is another adult relative of ${child.name_full()}?
   % endif
 subquestion: |
-  % if (users[0].is_family or users[0].is_stg) or (valid_co_guardian() and (users[1].is_family or users[1].is_stg) ) or caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
+  % if (getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False)) or (valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False))) or caregivers.there_are_any or adult_relatives.there_are_any or has_legal_parent:
   So far you have told us about: 
 
-  % if users[0].is_family or users[0].is_stg:
-  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
+  * You (${ users[0].name_full() }, ${users[0].relationship})
   % endif
-  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  % if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
   * ${ users[1].name_full() }, ${users[1].relationship}
   % endif
   % if has_legal_parent:
@@ -1204,10 +1224,10 @@ question: |
 subquestion: |
   So far you have told us about:
 
-  % if users[0].is_family or users[0].is_stg:
-  * You ( ${ users[0].name_full() }, ${users[0].relationship})
+  % if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
+  * You (${ users[0].name_full() }, ${users[0].relationship})
   % endif
-  % if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+  % if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
   * ${ users[1].name_full() }, ${users[1].relationship}
   % endif
   % if has_legal_parent:
@@ -1249,9 +1269,9 @@ code: |
   def number_users_family_or_stg():
 
     total = 0
-    if users[0].is_family or users[0].is_stg:
+    if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
         total += 1
-    if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+    if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
         total += 1
     return total
 ---
@@ -1332,9 +1352,9 @@ code: |
   if minor_is_married:
     temp_list.append(spouse)
   else:
-    if users[0].is_family or users[0].is_stg:
+    if getattr(users[0], 'is_family', False) or getattr(users[0], 'is_stg', False):
       temp_list.append(users[0])
-    if valid_co_guardian() and (users[1].is_family or users[1].is_stg):
+    if valid_co_guardian() and (getattr(users[1], 'is_family', False) or getattr(users[1], 'is_stg', False)):
       temp_list.append(users[1])
     if has_legal_parent:
       if not parents[0].is_dead:
@@ -1428,7 +1448,7 @@ fields:
     datatype: BirthDate
     alMax: ${ today().format("yyyy-MM-dd") }
 ---
-id: guardian too young kick out
+id: guardian too young kickout
 event: guardian_too_young
 question: |
   Sorry
@@ -1445,7 +1465,7 @@ question: |
   Are you willing and able to act as guardian of ${child.name_full()}?
 subquestion: |
   % if guardianship_type != "estate":
-  A guardian of the **person** is responsible for ${child.name_full()}'s:
+  A **guardian of the person** is responsible for ${child.name_full()}'s:
 
   * Safety,
   * Physical and emotional well-being,
@@ -1458,13 +1478,13 @@ subquestion: |
   
   % endif
   % if guardianship_type != "person":
-  A guardian of the **estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
+  A **guardian of the estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
   % endif
 fields:
   - no label: users[0].is_willing
     datatype: yesnoradio
 ---
-id: guardian not willing kick out
+id: guardian not willing kickout
 event: guardian_not_willing
 question: |
   Sorry
@@ -1524,18 +1544,20 @@ id: guardian disabled
 question: |
   Has a judge found you disabled and appointed a Guardian for you?
 subquestion: |
-  It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
+  If a court has appointed someone else to be a Guardian for you, you cannot be appointed guardian of a child.
 fields:
   - no label: users[0].is_disabled
     datatype: yesnoradio
 ---
-### not currently implemented - waiting on more SME input
+# former text when .is_disabled was not a kickout
+# It is up to the judge to decide how this might affect your ability to be appointed guardian of ${child.name_full()}.
+---
 id: guardian disabled kickout
 event: guardian_disabled_kickout
 question: |
   Sorry
 subquestion: |
-  If a court has appointed a Guardian for you, you cannot be appointed guardian of a child.
+  If a court has appointed someone else to be a Guardian for you, you cannot be appointed guardian of a child.
 
   Click **Back** if you made a mistake, or you can talk with a lawyer to discuss your options. Use **[Get Legal Help](https://www.illinoislegalaid.org/get-legal-help)** to find free or low-cost legal services in your area.
 buttons:
@@ -1768,7 +1790,7 @@ subquestion: |
   The co-guardian will have the same responsibilities as you.
   
   % if guardianship_type != "estate":
-  A guardian of the **person** is responsible for ${child.name_full()}'s:
+  A **guardian of the person** is responsible for ${child.name_full()}'s:
 
   * Safety,
   * Physical and emotional well-being,
@@ -1781,7 +1803,7 @@ subquestion: |
   
   % endif
   % if guardianship_type != "person":
-  A guardian of the **estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
+  A **guardian of the estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
   % endif  
 fields:
   - no label: add_co_guardian
@@ -1804,7 +1826,7 @@ fields:
     datatype: BirthDate
     alMax: ${ today().format("yyyy-MM-dd") }
 ---
-id: co-guardian too young kick out
+id: co-guardian too young kickout
 continue button field: co_guardian_too_young
 question: |
   Sorry
@@ -1813,12 +1835,33 @@ subquestion: |
   
   Click **Back** if you made a mistake, or click **Next** to continue making forms for you as the guardian.
 ---
+id: co-guardian disabled
+question: |
+  Has a judge found ${users[1].name_full()} disabled and appointed a Guardian for them?
+subquestion: |
+  If a court has appointed someone else to be a Guardian for ${users[1].name_full()}, they cannot be appointed guardian of a child.
+fields:
+  - no label: users[1].is_disabled
+    datatype: yesnoradio
+---
+# former text before changed to kickout
+#   It is up to the judge to decide how this might affect ${users[1].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
+---
+id: co-guardian disabled kickout
+continue button field: co_guardian_disabled
+question: |
+  Sorry
+subquestion: |
+  If a court has appointed someone else to be a Guardian for ${users[1].name_full()}, they cannot be appointed guardian of a child.
+  
+  Click **Back** if you made a mistake, or click **Next** to continue making forms for you as the guardian.
+---
 id: co-guardian willing and able
 question: |
   Is ${users[1].name_full()} willing and able to act as co-guardian of ${child.name_full()}?
 subquestion: |
   % if guardianship_type != "estate":
-  A co-guardian of the **person** is responsible for ${child.name_full()}'s:
+  A **co-guardian of the person** is responsible for ${child.name_full()}'s:
 
   * Safety,
   * Physical and emotional well-being,
@@ -1831,13 +1874,13 @@ subquestion: |
   
   % endif
   % if guardianship_type != "person":
-  A co-guardian of the **estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
+  A **co-guardian of the estate** is responsible for the care, management, and investment of ${child.name_full()}'s money and property.
   % endif
 fields:
   - no label: users[1].is_willing
     datatype: yesnoradio
 ---
-id: co-guardian not willing kick out
+id: co-guardian not willing kickout
 continue button field: co_guardian_not_willing
 question: |
   Sorry
@@ -1889,15 +1932,6 @@ subquestion: |
 fields:
   - ${users[1].name_full()}'s job: users[1].job
     maxlength: 50
----
-id: co-guardian disabled
-question: |
-  Has a judge found ${users[1].name_full()} disabled and appointed a Guardian for them?
-subquestion: |
-  It is up to the judge to decide how this might affect ${users[1].name_full()}'s ability to be appointed guardian of ${child.name_full()}.
-fields:
-  - no label: users[1].is_disabled
-    datatype: yesnoradio
 ---
 id: co-guardian negligent
 question: |
@@ -1979,7 +2013,7 @@ fields:
   - no label: oath_estate_agree
     datatype: yesnoradio
 ---
-id: oath required kick out
+id: oath required kickout
 event: oath_required
 question: |
   Sorry
@@ -2015,8 +2049,9 @@ code: |
   
     if add_co_guardian:
       if users[1].age_in_years() >= 18:
-        if users[1].is_willing:
-  	      return True
+        if not users[1].is_disabled:
+          if users[1].is_willing:
+  	        return True
   	  return False
     else:
       return False
@@ -3557,6 +3592,10 @@ review:
     button: |
       **Are you willing and able to act as guardian of ${child.name_full()}?**
       ${word(yesno(users[0].is_willing))}
+  - Edit: users[0].is_disabled
+    button: |
+      **Has a judge found you disabled and appointed a Guardian for you?**
+      ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].lives_with_child
     button: |
       **Do you live with ${child.name_full()}?**
@@ -3584,10 +3623,6 @@ review:
     button: |
       **What is your current job?**
       ${users[0].job}
-  - Edit: users[0].is_disabled
-    button: |
-      **Has a judge found you disabled and appointed a Guardian for you?**
-      ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].found_negligent
     button: |
       **Have you been found to have neglected or abused any child by DCFS or in court?**
@@ -3635,56 +3670,56 @@ review:
       **When was ${ users[1].name_full() } born?**
       ${ users[1].birthdate }
     show if: add_co_guardian
-  - Edit: users[1].is_willing
-    button: |
-      **Is ${ users[1].name_full() } willing and able to act as guardian of ${child.name_full()}?**
-      ${word(yesno(users[1].is_willing))}
-    show if: add_co_guardian
-  - Edit: users[1].lives_with_child
-    button: |
-      **Does ${ users[1].name_full() } live with ${child.name_full()}?**
-      ${word(yesno(users[1].lives_with_child))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
-  - Edit: users[1].address.address
-    button: |
-      **${ users[1].name_full() }'s address:**[NEWLINE]
-      ${ users[1].address.on_one_line(bare=True) }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
-  - Edit: users[1].relationship
-    button: |
-      **${ users[1].name_full() }'s relationship to ${child.name_full()}:**
-      ${ users[1].relationship }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
-  - Edit: users[1].is_family
-    button: |
-      **Is ${ users[1].name_full() } related to to ${child.name_full()} through blood or marriage?**
-      ${word(yesno(users[1].is_family))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
-  - Edit: users[1].is_stg
-    button: |
-      **Is ${ users[1].name_full() } the short-term guardian of ${child.name_full()}?**
-      ${word(yesno(users[1].is_stg))}      
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child      
-  - Edit: users[1].job
-    button: |
-      **What is ${ users[1].name_full() }'s current job?**
-      ${users[1].job}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].is_disabled
     button: |
       **Has a judge found ${ users[1].name_full() } disabled and appointed a Guardian for them?**
       ${ word(yesno(users[1].is_disabled))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18
+  - Edit: users[1].is_willing
+    button: |
+      **Is ${ users[1].name_full() } willing and able to act as guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_willing))}
+    show if: add_co_guardian and users[1].is_disabled == False
+  - Edit: users[1].lives_with_child
+    button: |
+      **Does ${ users[1].name_full() } live with ${child.name_full()}?**
+      ${word(yesno(users[1].lives_with_child))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
+  - Edit: users[1].address.address
+    button: |
+      **${ users[1].name_full() }'s address:**[NEWLINE]
+      ${ users[1].address.on_one_line(bare=True) }
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
+  - Edit: users[1].relationship
+    button: |
+      **${ users[1].name_full() }'s relationship to ${child.name_full()}:**
+      ${ users[1].relationship }
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_family
+    button: |
+      **Is ${ users[1].name_full() } related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(users[1].is_family))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_stg
+    button: |
+      **Is ${ users[1].name_full() } the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_stg))}      
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].lives_with_child      
+  - Edit: users[1].job
+    button: |
+      **What is ${ users[1].name_full() }'s current job?**
+      ${users[1].job}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].found_negligent
     button: |
       **Has ${ users[1].name_full() } been found to have neglected or abused any child by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].has_felony_conviction
     button: |
       **Does ${ users[1].name_full() } have any felony convictions?**
       ${ word(yesno(users[1].has_felony_conviction)) }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].felony_convictions.revisit
     button: |
       **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
@@ -3692,7 +3727,7 @@ review:
       % for conviction in users[1].felony_convictions:
       * Date: ${conviction.date}, Charge: ${ conviction.name.text }
       % endfor
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_felony_conviction
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].has_felony_conviction
   - Edit: users[1].phone_number
     button: |
       **${ users[1].name_full() }'s phone number:**
@@ -3701,17 +3736,17 @@ review:
       % else:
       ${ phone_number_formatted(users[1].phone_number) }
       % endif
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].has_email_address
     button: |
       **Does ${ users[1].name_full() }'s have an email address?**
       ${ word(yesno(users[1].has_email_address)) }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].email
     button: |
       **${ users[1].name_full() }'s email:**
       ${ users[1].email }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_email_address    
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].has_email_address    
   - Edit: oath_person_agree
     button: |
       **Do all proposed guardians agree to the terms of guardianship of the person?**
@@ -4806,6 +4841,10 @@ review:
     button: |
       **When were you born?**
       ${ users[0].birthdate }
+  - Edit: users[0].is_disabled
+    button: |
+      **Has a judge found you disabled and appointed a Guardian for you?**
+      ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].is_willing
     button: |
       **Are you willing and able to act as guardian of ${child.name_full()}?**
@@ -4837,10 +4876,6 @@ review:
     button: |
       **What is your current job?**
       ${users[0].job}
-  - Edit: users[0].is_disabled
-    button: |
-      **Has a judge found you disabled and appointed a Guardian for you?**
-      ${ word(yesno(users[0].is_disabled))}
   - Edit: users[0].found_negligent
     button: |
       **Have you been found to have neglected or abused any child by DCFS or in court?**
@@ -4892,56 +4927,56 @@ review:
       **When was ${ users[1].name_full() } born?**
       ${ users[1].birthdate }
     show if: add_co_guardian
-  - Edit: users[1].is_willing
-    button: |
-      **Is ${ users[1].name_full() } willing and able to act as guardian of ${child.name_full()}?**
-      ${word(yesno(users[1].is_willing))}
-    show if: add_co_guardian
-  - Edit: users[1].lives_with_child
-    button: |
-      **Does ${ users[1].name_full() } live with ${child.name_full()}?**
-      ${word(yesno(users[1].lives_with_child))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
-  - Edit: users[1].address.address
-    button: |
-      **${ users[1].name_full() }'s address:**[NEWLINE]
-      ${ users[1].address.on_one_line(bare=True) }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
-  - Edit: users[1].relationship
-    button: |
-      **${ users[1].name_full() }'s relationship to ${child.name_full()}:**
-      ${ users[1].relationship }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
-  - Edit: users[1].is_family
-    button: |
-      **Is ${ users[1].name_full() } related to to ${child.name_full()} through blood or marriage?**
-      ${word(yesno(users[1].is_family))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
-  - Edit: users[1].is_stg
-    button: |
-      **Is ${ users[1].name_full() } the short-term guardian of ${child.name_full()}?**
-      ${word(yesno(users[1].is_stg))}      
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].lives_with_child
-  - Edit: users[1].job
-    button: |
-      **What is ${ users[1].name_full() }'s current job?**
-      ${users[1].job}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
   - Edit: users[1].is_disabled
     button: |
       **Has a judge found ${ users[1].name_full() } disabled and appointed a Guardian for them?**
       ${ word(yesno(users[1].is_disabled))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18
+  - Edit: users[1].is_willing
+    button: |
+      **Is ${ users[1].name_full() } willing and able to act as guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_willing))}
+    show if: add_co_guardian and users[1].is_disabled == False
+  - Edit: users[1].lives_with_child
+    button: |
+      **Does ${ users[1].name_full() } live with ${child.name_full()}?**
+      ${word(yesno(users[1].lives_with_child))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
+  - Edit: users[1].address.address
+    button: |
+      **${ users[1].name_full() }'s address:**[NEWLINE]
+      ${ users[1].address.on_one_line(bare=True) }
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
+  - Edit: users[1].relationship
+    button: |
+      **${ users[1].name_full() }'s relationship to ${child.name_full()}:**
+      ${ users[1].relationship }
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_family
+    button: |
+      **Is ${ users[1].name_full() } related to to ${child.name_full()} through blood or marriage?**
+      ${word(yesno(users[1].is_family))}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].lives_with_child
+  - Edit: users[1].is_stg
+    button: |
+      **Is ${ users[1].name_full() } the short-term guardian of ${child.name_full()}?**
+      ${word(yesno(users[1].is_stg))}      
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].lives_with_child      
+  - Edit: users[1].job
+    button: |
+      **What is ${ users[1].name_full() }'s current job?**
+      ${users[1].job}
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].found_negligent
     button: |
       **Has ${ users[1].name_full() } been found to have neglected or abused any child by DCFS or in court?**
       ${ word(yesno(users[1].found_negligent))}
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].has_felony_conviction
     button: |
       **Does ${ users[1].name_full() } have any felony convictions?**
       ${ word(yesno(users[1].has_felony_conviction)) }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].felony_convictions.revisit
     button: |
       **${ users[1].name_full() }'s past felony convictions: (Edit to change details)**
@@ -4949,7 +4984,7 @@ review:
       % for conviction in users[1].felony_convictions:
       * Date: ${conviction.date}, Charge: ${ conviction.name.text }
       % endfor
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_felony_conviction
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].has_felony_conviction
   - Edit: users[1].phone_number
     button: |
       **${ users[1].name_full() }'s phone number:**
@@ -4958,17 +4993,17 @@ review:
       % else:
       ${ phone_number_formatted(users[1].phone_number) }
       % endif
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].has_email_address
     button: |
       **Does ${ users[1].name_full() }'s have an email address?**
       ${ word(yesno(users[1].has_email_address)) }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing
   - Edit: users[1].email
     button: |
       **${ users[1].name_full() }'s email:**
       ${ users[1].email }
-    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_willing and users[1].has_email_address    
+    show if: add_co_guardian and users[1].age_in_years() >= 18 and users[1].is_disabled == False and users[1].is_willing and users[1].has_email_address
   
   - Edit: oath_person_agree
     button: |
